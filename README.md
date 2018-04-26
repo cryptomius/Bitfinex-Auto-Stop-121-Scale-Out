@@ -7,12 +7,10 @@ This Node JS script executes a long/short order when a trigger price is reached,
 To use it:
 
 1. Download nodeJS: [https://nodejs.org/en/download/](https://nodejs.org/en/download/) and install it
-2. Download [Bitfinex’s nodeJS library](https://github.com/bitfinexcom/bitfinex-api-node/) and place it somewhere on your computer.
-3. Open your Terminal app, `cd` to the directory you placed it and then execute `npm i bitfinex-api-node` to install the nodeJS library
-4. Execute `npm install crc-32` (required library)
-5. Execute `npm install --save bignumber.js` (required library)
-6. Copy the ‘[121ScaleOut.js](https://raw.githubusercontent.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/master/121ScaleOut.js)’ file into the same directory, then open it with a text editor (I use Sublime Text)
-7. Enter in your Bitfinex API keys, trading pair, entry price, stop price, direction (long/short), etc. 
+2. Download the [Bitfinex-Auto-Stop-121-Scale-Out library](https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/archive/master.zip) and unzip it somewhere on your computer.
+3. Open your Terminal app, `cd` to the directory you placed it and then execute `npm install` to install the nodeJS dependencies
+4. Open the ‘[121ScaleOut.js](https://raw.githubusercontent.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/master/121ScaleOut.js)’ file with a text editor (I use Sublime Text)
+5. Enter in your Bitfinex API keys, trading pair, entry price, stop price, direction (long/short), etc. 
 6. Execute `node 121ScaleOut` and you’re in action.
 
 IMPORTANT: Your computer must be left running and connected to the internet for the stop to be placed by this script.
