@@ -1,23 +1,33 @@
 // This script places an order and once filled, places a stop for 50% and 
 //  an OCO limit+stop order for the other 50% at 1:1
-// v1 Shannon Murdoch @cryptomius 25 April 2018
+// v2 Shannon Murdoch @cryptomius 26 April 2018
 
 // SETUP
 const bitfinexAPIKey			= ''
 const bitfinexAPISecret		= ''
 
-const tradingPair					= 'BTCUSD'
-const tradeAmount					= 0.004			// amount to buy/sell
-const entryPrice					= 9185			// entry price
-const stopPrice						= 9200			// stop price
-const entryDirection			= 'short'	// 'long' (entry buy) or 'short' (entry sell)
-const margin							= true		// true for MARGIN, false for EXCHANGE
+var tradingPair					= 'BTCUSD'
+var tradeAmount					= 0.004			// amount to buy/sell
+var entryPrice					= 10000			// entry price
+var stopPrice						= 9990			// stop price
+var entryDirection			= 'long'		// 'long' (entry buy) or 'short' (entry sell)
+var margin							= true			// true for MARGIN, false for EXCHANGE
 // END SETUP
 
 // run using `node 121ScaleOut` 
 
 ////////////////////////////////////
-
+var roundToSignificantDigitsBFX = function(num) {
+	// Bitfinex uses 5 significant digits
+	// 	https://support.bitfinex.com/hc/en-us/articles/115000371105-How-is-precision-calculated-using-Significant-Digits
+	var n = 5; 
+  if(num == 0) { return 0; }
+  var d = Math.ceil(Math.log10(num < 0 ? -num: num));
+  var power = n - d;
+  var magnitude = Math.pow(10, power);
+  var shifted = Math.round(num*magnitude);
+  return shifted/magnitude;
+}
 
 const BFX = require('bitfinex-api-node')
 
@@ -34,7 +44,9 @@ const bfx = new BFX({
 	}
 })
 
-
+entryPrice 	= roundToSignificantDigitsBFX(entryPrice)
+stopPrice 	= roundToSignificantDigitsBFX(stopPrice)
+tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
 
 const ws = bfx.ws()
 
@@ -47,8 +59,7 @@ ws.once('auth', () => {
 		symbol: 't' + tradingPair,
 		price: entryPrice,
 		amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-		type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"],
-		priceAuxLimit: entryPrice
+		type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
 	}, ws)
 
 	// Enable automatic updates
@@ -63,7 +74,7 @@ ws.once('auth', () => {
 
 		if (o.status != 'CANCELED') {
 			console.log('Position entered')
-			amount1 = ((entryDirection=='long')?-tradeAmount:tradeAmount)/2
+			amount1 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 			const o2 = new Order({
 				cid: Date.now(),
 				symbol: 't' + tradingPair,
@@ -76,8 +87,9 @@ ws.once('auth', () => {
 
 			o2.submit().then(() => {
 				console.log('submitted 50% stop order')
-				price1 = entryPrice-(stopPrice-entryPrice)
-				amount2 = ((entryDirection=='long')?-tradeAmount:tradeAmount)/2
+				price1 = roundToSignificantDigitsBFX(entryPrice-(stopPrice-entryPrice))
+				amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
+
 				const o3 = new Order({
 					cid: Date.now(),
 					symbol: 't' + tradingPair,
