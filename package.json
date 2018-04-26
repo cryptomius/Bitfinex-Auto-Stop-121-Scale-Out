@@ -1,0 +1,20 @@
+{
+  "name": "bitfinex-auto-stop-121-scale-out",
+  "version": "1.0.0",
+  "main": "121ScaleOut.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out.git"
+  },
+  "author": "Shannon Murdoch",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/issues"
+  },
+  "homepage": "https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out#readme",
+  "dependencies": {
+    "bignumber.js": "^6.0.0",
+    "bitfinex-api-node": "^2.0.0-beta",
+    "crc-32": "^1.2.0"
+  }
+}
