@@ -86,6 +86,8 @@ ws.once('auth', () => {
 			console.log('compiled stop order for ' + amount1 + ' at ' + stopPrice)
 
 			o2.submit().then(() => {
+				console.log('average price of entry = ' + o.priceAvg)
+				entryPrice = o.priceAvg
 				console.log('submitted 50% stop order')
 				price1 = roundToSignificantDigitsBFX(entryPrice-(stopPrice-entryPrice))
 				amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
