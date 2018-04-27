@@ -31,7 +31,7 @@ var roundToSignificantDigitsBFX = function(num) {
 
 const BFX = require('bitfinex-api-node')
 
-const { Order } = require('./lib/models')
+const { Order } = BFX.Models
 
 const bfx = new BFX({
 	apiKey: bitfinexAPIKey,
