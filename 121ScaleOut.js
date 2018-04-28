@@ -17,16 +17,18 @@ var margin							= true			// true for MARGIN, false for EXCHANGE
 // run using `node 121ScaleOut` 
 
 ////////////////////////////////////
+const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
+
 var roundToSignificantDigitsBFX = function(num) {
 	// Bitfinex uses 5 significant digits
 	// 	https://support.bitfinex.com/hc/en-us/articles/115000371105-How-is-precision-calculated-using-Significant-Digits
-	var n = 5; 
-  if(num == 0) { return 0; }
-  var d = Math.ceil(Math.log10(num < 0 ? -num: num));
-  var power = n - d;
-  var magnitude = Math.pow(10, power);
-  var shifted = Math.round(num*magnitude);
-  return shifted/magnitude;
+	var n = 5
+  if(num == 0) { return 0 }
+  var d = Math.ceil(Math.log10(num < 0 ? -num: num))
+  var power = n - d
+  var magnitude = Math.pow(10, power)
+  var shifted = Math.round(num*magnitude)
+  return shifted/magnitude
 }
 
 const BFX = require('bitfinex-api-node')
@@ -74,6 +76,7 @@ ws.once('auth', () => {
 
 		if (o.status != 'CANCELED') {
 			console.log('Position entered')
+			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			amount1 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 			const o2 = new Order({
 				cid: Date.now(),
@@ -109,17 +112,17 @@ ws.once('auth', () => {
 				}).catch((err) => {
 					console.error(err)
 					ws.close()
-					process.exitCode = 1
+					process.exit()
 				})
 
 			}).catch((err) => {
 				console.error(err)
 				ws.close()
-				process.exitCode = 1
+				process.exit()
 			})
 		} else {
 			ws.close()
-			process.exitCode = 1
+			process.exit()
 		}
 	})
 
@@ -131,4 +134,9 @@ ws.once('auth', () => {
 	})
 })
 
-ws.open()
+if (margin == false && entryDirection == 'short') {
+	console.log('You must use margin=true if you want to go short.')
+	process.exit()
+}else{
+	ws.open()
+}
