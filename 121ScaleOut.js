@@ -109,6 +109,8 @@ ws.once('auth', () => {
 
 				o3.submit().then(() => {
 					console.log('submitted 50% 1:1 + stop (oco) limit order')
+					ws.close()
+					process.exit()
 				}).catch((err) => {
 					console.error(err)
 					ws.close()
@@ -130,7 +132,7 @@ ws.once('auth', () => {
 		console.log(`submitted entry order ${o.id}`)
 	}).catch((err) => {
 		console.error(err)
-		
+		process.exit()
 	})
 })
 
