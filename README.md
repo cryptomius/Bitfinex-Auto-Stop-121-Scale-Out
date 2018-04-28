@@ -7,7 +7,7 @@ This Node JS script executes a long/short order when a trigger price is reached,
 You will need to download and install the following:
 
 * nodeJS: [https://nodejs.org/en/download/](https://nodejs.org/en/download/)
-* Git (if you use Microsoft Windows): [https://gitforwindows.org/](https://gitforwindows.org/)
+* Git: [Git for Windows](https://gitforwindows.org/) | [Git for Mac](https://sourceforge.net/projects/git-osx-installer/files/latest/download?source=files) | [Git for Linux](https://git-scm.com/download/linux)
 
 To install and use the script:
 
