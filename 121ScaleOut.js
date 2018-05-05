@@ -71,14 +71,14 @@ ws.once('auth', () => {
 	o.registerListeners()
 
 	o.on('update', () => {
-		console.log(`order updated: ${o.serialize()}`)
+		console.log(`Order updated: ${o.serialize()}`)
 	})
 
 	o.on('close', () => {
-		console.log(`order status: ${o.status}`)
+		console.log(`Order status: ${o.status}`)
 
 		if (o.status != 'CANCELED') {
-			console.log('Position entered')
+			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			amount1 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 			const o2 = new Order({
