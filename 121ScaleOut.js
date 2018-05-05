@@ -8,10 +8,10 @@ const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
 
 var tradingPair					= 'BTCUSD'
 var tradeAmount					= 0.004			// amount to buy/sell
-var entryPrice					= 9820.4			// entry price
-var stopPrice						= 9775.8			// stop price
+var entryPrice					= 10000			// entry price
+var stopPrice						= 9000			// stop price
 var entryDirection			= 'long'		// 'long' (entry buy) or 'short' (entry sell)
-var entryLimitOrder			= true			// false for market stop-order based entry, true for limit-order entry
+var entryLimitOrder			= false			// false for market stop-order based entry, true for limit-order entry
 var margin							= true			// true for MARGIN, false for EXCHANGE
 var targetMultiplier		= 1 				// (optional) default is 1 for 1:1 (set to 1.4 for 1:1.4 scale-out of 50%)
 // END SETUP
