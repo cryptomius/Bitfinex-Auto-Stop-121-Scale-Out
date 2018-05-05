@@ -8,8 +8,8 @@ const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
 
 var tradingPair					= 'BTCUSD'
 var tradeAmount					= 0.004			// amount to buy/sell
-var entryPrice					= 9818.8			// entry price
-var stopPrice						= 9770.2			// stop price
+var entryPrice					= 9820.4			// entry price
+var stopPrice						= 9775.8			// stop price
 var entryDirection			= 'long'		// 'long' (entry buy) or 'short' (entry sell)
 var entryLimitOrder			= true			// false for market stop-order based entry, true for limit-order entry
 var margin							= true			// true for MARGIN, false for EXCHANGE
@@ -34,7 +34,8 @@ var roundToSignificantDigitsBFX = function(num) {
 }
 
 const BFX = require('bitfinex-api-node')
-
+require('dotenv').config()
+const { API_KEY, API_SECRET, REST_URL, WS_URL, SOCKS_PROXY_URL } = process.env
 const { Order } = BFX.Models
 
 const bfx = new BFX({
@@ -111,6 +112,8 @@ ws.once('auth', () => {
 
 				o3.submit().then(() => {
 					console.log('submitted 50% 1:1 + stop (oco) limit order')
+					console.log('------------------------------------------')
+					console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121 :-)')
 					ws.close()
 					process.exit()
 				}).catch((err) => {
