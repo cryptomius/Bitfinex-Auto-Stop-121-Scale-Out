@@ -1,17 +1,19 @@
-// This script places an order and once filled, places a stop for 50% and 
-//  an OCO limit+stop order for the other 50% at 1:1
-// v2 Shannon Murdoch @cryptomius 26 April 2018
+// This script places an order and once filled, places a stop for 50% and an OCO limit+stop order
+//  for the other 50% at 1:1 risk/reward to eliminate risk from your trade early
+//  https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out
 
 // SETUP
-const bitfinexAPIKey			= ''
-const bitfinexAPISecret		= ''
+const bitfinexAPIKey			= ''			// leave blank to use API_KEY from .env file
+const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
 
 var tradingPair					= 'BTCUSD'
 var tradeAmount					= 0.004			// amount to buy/sell
-var entryPrice					= 10000			// entry price
-var stopPrice						= 9990			// stop price
+var entryPrice					= 9818.8			// entry price
+var stopPrice						= 9770.2			// stop price
 var entryDirection			= 'long'		// 'long' (entry buy) or 'short' (entry sell)
+var entryLimitOrder			= true			// false for market stop-order based entry, true for limit-order entry
 var margin							= true			// true for MARGIN, false for EXCHANGE
+var targetMultiplier		= 1 				// (optional) default is 1 for 1:1 (set to 1.4 for 1:1.4 scale-out of 50%)
 // END SETUP
 
 // run using `node 121ScaleOut` 
@@ -36,8 +38,8 @@ const BFX = require('bitfinex-api-node')
 const { Order } = BFX.Models
 
 const bfx = new BFX({
-	apiKey: bitfinexAPIKey,
-	apiSecret: bitfinexAPISecret,
+	apiKey: bitfinexAPIKey==''?API_KEY:bitfinexAPIKey,
+	apiSecret: bitfinexAPISecret==''?API_SECRET:bitfinexAPISecret,
 
 	ws: {
 		autoReconnect: true,
@@ -61,7 +63,7 @@ ws.once('auth', () => {
 		symbol: 't' + tradingPair,
 		price: entryPrice,
 		amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-		type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
+		type: Order.type[(!margin?"EXCHANGE_":"") + (entryLimitOrder?"LIMIT":"STOP")]
 	}, ws)
 
 	// Enable automatic updates
@@ -92,13 +94,13 @@ ws.once('auth', () => {
 				console.log('average price of entry = ' + o.priceAvg)
 				entryPrice = o.priceAvg
 				console.log('submitted 50% stop order')
-				price1 = roundToSignificantDigitsBFX(entryPrice-(stopPrice-entryPrice))
+				price1 = roundToSignificantDigitsBFX((entryPrice-(stopPrice-entryPrice))*targetMultiplier)
 				amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 
 				const o3 = new Order({
 					cid: Date.now(),
 					symbol: 't' + tradingPair,
-					price: price1, // 1:1 price
+					price: price1, // scale-out target price (1:1)
 					amount: amount2,
 					type: Order.type[(!margin?"EXCHANGE_":"") + "LIMIT"],
 					oco: true,
