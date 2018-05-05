@@ -8,10 +8,10 @@ const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
 
 var tradingPair					= 'BTCUSD'
 var tradeAmount					= 0.004			// amount to buy/sell
-var entryPrice					= 10000			// entry price
+var entryPrice					= 10000			// entry price (0 for market price)
 var stopPrice						= 9000			// stop price
 var entryDirection			= 'long'		// 'long' (entry buy) or 'short' (entry sell)
-var entryLimitOrder			= false			// false for market stop-order based entry, true for limit-order entry
+var entryLimitOrder			= false			// false for market stop-order based entry, true for limit-order entry (ignored if entryPrice is 0)
 var margin							= true			// true for MARGIN, false for EXCHANGE
 var targetMultiplier		= 1 				// (optional) default is 1 for 1:1 (set to 1.4 for 1:1.4 scale-out of 50%)
 // END SETUP
@@ -35,7 +35,7 @@ var roundToSignificantDigitsBFX = function(num) {
 
 const BFX = require('bitfinex-api-node')
 require('dotenv').config()
-const { API_KEY, API_SECRET, REST_URL, WS_URL, SOCKS_PROXY_URL } = process.env
+const { API_KEY, API_SECRET } = process.env
 const { Order } = BFX.Models
 
 const bfx = new BFX({
@@ -64,7 +64,7 @@ ws.once('auth', () => {
 		symbol: 't' + tradingPair,
 		price: entryPrice,
 		amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-		type: Order.type[(!margin?"EXCHANGE_":"") + (entryLimitOrder?"LIMIT":"STOP")]
+		type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
 	}, ws)
 
 	// Enable automatic updates
