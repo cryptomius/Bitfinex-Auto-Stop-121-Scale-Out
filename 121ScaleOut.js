@@ -89,12 +89,12 @@ ws.once('auth', () => {
 				type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
 			}, ws)
 
-			console.log('compiled stop order for ' + amount1 + ' at ' + stopPrice)
+			console.log(' Compiled stop order for ' + amount1 + ' at ' + stopPrice)
 
 			o2.submit().then(() => {
-				console.log('average price of entry = ' + o.priceAvg)
+				console.log(' Average price of entry = ' + o.priceAvg)
 				entryPrice = o.priceAvg
-				console.log('submitted 50% stop order')
+				console.log('Submitted 50% stop order')
 				price1 = roundToSignificantDigitsBFX((entryPrice-(stopPrice-entryPrice))*targetMultiplier)
 				amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 
@@ -108,12 +108,13 @@ ws.once('auth', () => {
 					priceAuxLimit: stopPrice
 				}, ws)
 
-				console.log('compiled oco limit order for ' + amount2 + ' at ' + price1 + ' and stop at ' + stopPrice)
+				console.log(' Compiled oco limit order for ' + amount2 + ' at ' + price1 + ' and stop at ' + stopPrice)
 
 				o3.submit().then(() => {
-					console.log('submitted 50% 1:1 + stop (oco) limit order')
+					console.log('Submitted 50% 1:1 + stop (oco) limit order')
 					console.log('------------------------------------------')
-					console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121 :-)')
+					console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121')
+					console.log('------------------------------------------')
 					ws.close()
 					process.exit()
 				}).catch((err) => {
