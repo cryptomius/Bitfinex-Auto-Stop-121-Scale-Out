@@ -13,8 +13,8 @@ To install and use the script:
 1. Download the [Bitfinex-Auto-Stop-121-Scale-Out library](https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/archive/master.zip) and unzip it somewhere on your computer (or clone the repository if you know how).
 2. Open your Terminal/Command Prompt app, `cd` to the directory you placed it and then execute `npm install` to install the nodeJS dependencies
 3. Open the ‘[121ScaleOut.js](https://raw.githubusercontent.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/master/121ScaleOut.js)’ file with a text editor (I use Sublime Text)
-4. Enter in your Bitfinex API keys, trading pair, entry price, stop price, direction (long/short), etc. 
-5. Execute `node 121ScaleOut` and you’re in action.
+4. Enter in your Bitfinex API key and secret in the `SETUP` section.
+5. Execute `node 121ScaleOut` for help on using the command line interface.
 
 IMPORTANT: Your computer must be left running and connected to the internet for the stop to be placed by this script.
 
