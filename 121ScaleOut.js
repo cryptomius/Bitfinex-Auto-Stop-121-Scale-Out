@@ -1,5 +1,5 @@
-// This script places an order and once filled, places a stop for 50% and an OCO limit+stop order
-//  for the other 50% at 1:1 risk/reward to eliminate risk from your trade early
+// This script places an order (stop or limit-based) and once filled, places a stop for 50% and an 
+//  OCO limit+stop order for the other 50% at 1:1 risk/reward to eliminate risk from your trade early
 //  https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out
 
 // SETUP
@@ -13,12 +13,12 @@ const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
 
 var argv = parseArguments()
 
-var tradingPair = argv.pair
+var tradingPair = argv.pair.toUpperCase()
 var tradeAmount	= argv.amount
 var entryPrice = argv.entry
 var stopPrice = argv.stop
 var entryDirection = argv.short ? 'short' : 'long'
-var entryLimitOrder	= !argv.market
+var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
 var targetMultiplier = argv.target
 
@@ -155,7 +155,7 @@ if (margin == false && entryDirection == 'short') {
 function parseArguments() {
 	return require('yargs')
 	.usage('Usage: node $0')
-	.example('node $0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a limit order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 target')
+	.example('node $0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a long market stop entry order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 50% scale-out target.')
 	// '-p <tradingPair>'
 	.demand('pair')
 	.alias('p', 'pair')
@@ -166,10 +166,10 @@ function parseArguments() {
 	.alias('a', 'amount')
 	.describe('a', 'Set amount to buy/sell')
 	// '-e <entryPrice>'
-	.demand('entry')
 	.number('e')
 	.alias('e', 'entry')
-	.describe('e', 'Set entry price (0 for market price)')
+	.describe('e', 'Set entry price (exclude for market price)')
+	.default('e', 0)
 	// '-s <stopPrice>'
 	.demand('stop')
 	.number('s')
@@ -184,15 +184,16 @@ function parseArguments() {
 	.alias('S', 'short')
 	.describe('S', 'Enter short (entry sell) instead of long (entry buy) position')
 	.default('S', false)
-	// '-m' for market stop-order entry
-	.boolean('m')
-	.alias('m', 'market')
-	.describe('m', 'Place market stop-order instead of limit-order entry (ignored if entryPrice is 0)')
-	.default('m', false)
+	// '-l' for limit-order entry
+	.boolean('l')
+	.alias('l', 'limit')
+	.describe('l', 'Place limit-order instead of a market stop-order entry (ignored if entryPrice is 0)')
+	.default('l', false)
 	// '-x' for exchange trading
 	.boolean('x')
 	.alias('x', 'exchange')
 	.describe('x', 'Trade on exchange instead of margin')
 	.default('x', false)
+	.wrap(process.stdout.columns)
 	.argv;
 }
