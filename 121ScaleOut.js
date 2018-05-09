@@ -5,20 +5,23 @@
 // SETUP
 const bitfinexAPIKey			= ''			// leave blank to use API_KEY from .env file
 const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
-
-var tradingPair					= 'BTCUSD'
-var tradeAmount					= 0.004			// amount to buy/sell
-var entryPrice					= 10000			// entry price (0 for market price)
-var stopPrice						= 9000			// stop price
-var entryDirection			= 'long'		// 'long' (entry buy) or 'short' (entry sell)
-var entryLimitOrder			= false			// false for market stop-order based entry, true for limit-order entry (ignored if entryPrice is 0)
-var margin							= true			// true for MARGIN, false for EXCHANGE
-var targetMultiplier		= 1 				// (optional) default is 1 for 1:1 (set to 1.4 for 1:1.4 scale-out of 50%)
 // END SETUP
 
 // run using `node 121ScaleOut` 
 
 ////////////////////////////////////
+
+var argv = parseArguments()
+
+var tradingPair = argv.pair
+var tradeAmount	= argv.amount
+var entryPrice = argv.entry
+var stopPrice = argv.stop
+var entryDirection = argv.short ? 'short' : 'long'
+var entryLimitOrder	= !argv.market
+var margin = !argv.exchange
+var targetMultiplier = argv.target
+
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
 var roundToSignificantDigitsBFX = function(num) {
@@ -147,4 +150,49 @@ if (margin == false && entryDirection == 'short') {
 	process.exit()
 }else{
 	ws.open()
+}
+
+function parseArguments() {
+	return require('yargs')
+	.usage('Usage: node $0')
+	.example('node $0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a limit order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 target')
+	// '-p <tradingPair>'
+	.demand('pair')
+	.alias('p', 'pair')
+	.describe('p', 'Set trading pair eg. BTCUSD')
+	// '-a <tradeAmount>'
+	.demand('amount')
+	.number('a')
+	.alias('a', 'amount')
+	.describe('a', 'Set amount to buy/sell')
+	// '-e <entryPrice>'
+	.demand('entry')
+	.number('e')
+	.alias('e', 'entry')
+	.describe('e', 'Set entry price (0 for market price)')
+	// '-s <stopPrice>'
+	.demand('stop')
+	.number('s')
+	.alias('s', 'stop')
+	.describe('s', 'Set stop price')
+	// '-t <targetMultiplier>'
+	.alias('t', 'target')
+	.describe('t', 'Set target multiplier eg. 1.4 for 1:1.4 scale-out of 50%. Default 1:1.')
+	.default('t', 1)
+	// '-S' for 'short' (entry sell) entry direction. Default direction is 'long' (entry buy)
+	.boolean('S')
+	.alias('S', 'short')
+	.describe('S', 'Enter short (entry sell) instead of long (entry buy) position')
+	.default('S', false)
+	// '-m' for market stop-order entry
+	.boolean('m')
+	.alias('m', 'market')
+	.describe('m', 'Place market stop-order instead of limit-order entry (ignored if entryPrice is 0)')
+	.default('m', false)
+	// '-x' for exchange trading
+	.boolean('x')
+	.alias('x', 'exchange')
+	.describe('x', 'Trade on exchange instead of margin')
+	.default('x', false)
+	.argv;
 }
