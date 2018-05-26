@@ -21,6 +21,7 @@ var entryDirection = argv.short ? 'short' : 'long'
 var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
 var targetMultiplier = argv.target
+var hiddenExitOrders = argv.hideexit
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -83,38 +84,26 @@ ws.once('auth', () => {
 		if (o.status != 'CANCELED') {
 			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
-			amount1 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
-			const o2 = new Order({
-				cid: Date.now(),
-				symbol: 't' + tradingPair,
-				price: stopPrice,
-				amount: amount1,
-				type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
-			}, ws)
+			if(o.priceAvg == null && entryPrice==0){
+				amount4 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount))
+				console.log(' Average price of entry was NOT RETURNED by Bitfinex! 1:' + targetMultiplier + ' oco target cannot be calculated. :-(')
+				console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
 
-			console.log(' Compiled stop order for ' + amount1 + ' at ' + stopPrice)
+				console.log('Please send this to @cryptomius to help debug:')
+				console.log(argv)
+				console.log(o)
 
-			o2.submit().then(() => {
-				console.log(' Average price of entry = ' + o.priceAvg)
-				entryPrice = o.priceAvg
-				console.log('Submitted 50% stop order')
-				price1 = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier))
-				amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
-
-				const o3 = new Order({
+				const o4 = new Order({
 					cid: Date.now(),
 					symbol: 't' + tradingPair,
-					price: price1, // scale-out target price (1:1)
-					amount: amount2,
-					type: Order.type[(!margin?"EXCHANGE_":"") + "LIMIT"],
-					oco: true,
-					priceAuxLimit: stopPrice
+					price: stopPrice,
+					amount: amount4,
+					hidden: hiddenExitOrders,
+					type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
 				}, ws)
 
-				console.log(' Compiled oco limit order for ' + amount2 + ' at ' + price1 + ' and stop at ' + stopPrice)
-
-				o3.submit().then(() => {
-					console.log('Submitted 50% 1:1 + stop (oco) limit order')
+				o4.submit().then(() => {
+					console.log('Submitted 100% stop order. YOU MUST REDUCE THIS TO 50% AND CREATE AN oco LIMIT+STOP ORDER MANUALLY.')
 					console.log('------------------------------------------')
 					console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121')
 					console.log('------------------------------------------')
@@ -126,11 +115,63 @@ ws.once('auth', () => {
 					process.exit()
 				})
 
-			}).catch((err) => {
-				console.error(err)
-				ws.close()
-				process.exit()
-			})
+			} else {
+				amount1 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
+				const o2 = new Order({
+					cid: Date.now(),
+					symbol: 't' + tradingPair,
+					price: stopPrice,
+					amount: amount1,
+					hidden: hiddenExitOrders,
+					type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
+				}, ws).catch((err) => {
+					console.error(err)
+					ws.close()
+					process.exit()
+				})
+
+				console.log(' Compiled stop order for ' + amount1 + ' at ' + stopPrice)
+
+				o2.submit().then(() => {
+					console.log(' Average price of entry = ' + o.priceAvg)
+					entryPrice = o.priceAvg
+					console.log('Submitted 50% stop order')
+					price1 = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier))
+					amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
+
+					const o3 = new Order({
+						cid: Date.now(),
+						symbol: 't' + tradingPair,
+						price: price1, // scale-out target price (1:1)
+						amount: amount2,
+						type: Order.type[(!margin?"EXCHANGE_":"") + "LIMIT"],
+						oco: true,
+						hidden: hiddenExitOrders,
+						priceAuxLimit: stopPrice
+					}, ws)
+
+					console.log(' Compiled oco limit order for ' + amount2 + ' at ' + price1 + ' and stop at ' + stopPrice)
+
+					o3.submit().then(() => {
+						console.log('Submitted 50% 1:1 + stop (oco) limit order')
+						console.log('------------------------------------------')
+						console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121')
+						console.log('------------------------------------------')
+						ws.close()
+						process.exit()
+					}).catch((err) => {
+						console.error(err)
+						ws.close()
+						process.exit()
+					})
+					
+
+				}).catch((err) => {
+					console.error(err)
+					ws.close()
+					process.exit()
+				})
+			}
 		} else {
 			ws.close()
 			process.exit()
@@ -194,6 +235,11 @@ function parseArguments() {
 	.alias('x', 'exchange')
 	.describe('x', 'Trade on exchange instead of margin')
 	.default('x', false)
+	// '-h' for hidden exit orders
+	.boolean('h')
+	.alias('h', 'hideexit')
+	.describe('h', 'Hide your target and stop orders from the orderbook')
+	.default('h', false)
 	.wrap(process.stdout.columns)
 	.argv;
 }
