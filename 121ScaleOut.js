@@ -22,6 +22,7 @@ var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
 var targetMultiplier = argv.target
 var hiddenExitOrders = argv.hideexit
+var cancelOnStop = argv.cancelonstop
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -52,24 +53,73 @@ const bfx = new BFX({
 		packetWDDelay: 10 * 1000
 	}
 })
+const bfx2 = new BFX({
+	apiKey: bitfinexAPIKey==''?API_KEY:bitfinexAPIKey,
+	apiSecret: bitfinexAPISecret==''?API_SECRET:bitfinexAPISecret,
+
+	ws: {
+		autoReconnect: true,
+		seqAudit: false,
+		packetWDDelay: 10 * 1000
+	}
+})
 
 entryPrice 	= roundToSignificantDigitsBFX(entryPrice)
 stopPrice 	= roundToSignificantDigitsBFX(stopPrice)
 tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
 
+var entryOrderActive = false
+
+
 const ws = bfx.ws()
+const ws2 = bfx2.ws(2, { transform: true })
+
+ws2.on('open', () => {
+	ws2.subscribeTicker('t' + tradingPair)
+})
+ws2.on('error', (err) => console.log(err))
+
 
 ws.on('error', (err) => console.log(err))
-ws.on('open', ws.auth.bind(ws))
+ws.on('open', () => {
+	ws.auth.bind(ws)
+	if(entryLimitOrder == false){
+		ws2.open()
+	}
+})
+
+ws2.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
+	tickerObj = ticker.toJS()
+	if (cancelOnStop && entryOrderActive && entryLimitOrder == false) {
+		if ((entryDirection=='long' && tickerObj.lastPrice < stopPrice) || (entryDirection=='short' && tickerObj.lastPrice > stopPrice) ){
+			// kill the entry order as the stop has been hit prior to entry
+			console.log('Your stop price of ' + stopPrice + ' was breached prior to entry. Cancelling entry order.')
+			o.cancel().then(() => {
+				console.log('Cancellation confirmed for order %d', o.cid)
+				ws.close()
+				ws2.close()
+				process.exit()
+			  }).catch((err) => {
+				console.log('WARNING - error cancelling order: %j', err)
+				ws.close()
+				ws2.close()
+				process.exit()
+			  })
+		}
+	} else {
+		console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ', stop price: ' + stopPrice)
+	}
+})
+
+const o = new Order({
+	cid: Date.now(),
+	symbol: 't' + tradingPair,
+	price: entryPrice,
+	amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
+	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
+}, ws)
 
 ws.once('auth', () => {
-	const o = new Order({
-		cid: Date.now(),
-		symbol: 't' + tradingPair,
-		price: entryPrice,
-		amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-		type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
-	}, ws)
 
 	// Enable automatic updates
 	o.registerListeners()
@@ -82,6 +132,11 @@ ws.once('auth', () => {
 		console.log(`Order status: ${o.status}`)
 
 		if (o.status != 'CANCELED') {
+			entryOrderActive = false
+			if(entryLimitOrder == false){
+				ws2.unsubscribeTicker('t' + tradingPair)
+				ws2.close()
+			}
 			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			if(o.priceAvg == null && entryPrice==0){
@@ -173,12 +228,14 @@ ws.once('auth', () => {
 				})
 			}
 		} else {
+			console.log('Entry order cancelled.')
 			ws.close()
 			process.exit()
 		}
 	})
 
 	o.submit().then(() => {
+		entryOrderActive = true
 		console.log(`submitted entry order ${o.id}`)
 	}).catch((err) => {
 		console.error(err)
@@ -240,6 +297,11 @@ function parseArguments() {
 	.alias('h', 'hideexit')
 	.describe('h', 'Hide your target and stop orders from the orderbook')
 	.default('h', false)
+	// '-c' to cancel entry if stop level is breached
+	.boolean('c')
+	.alias('c', 'cancelonstop')
+	.describe('c', 'Cancel your entry order if the stop level is breached (ignored for limit entry orders)')
+	.default('c', true)
 	.wrap(process.stdout.columns)
 	.argv;
 }
