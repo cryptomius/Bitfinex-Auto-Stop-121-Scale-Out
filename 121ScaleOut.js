@@ -160,8 +160,6 @@ ws.once('auth', () => {
 				o4.submit().then(() => {
 					console.log('Submitted 100% stop order. YOU MUST REDUCE THIS TO 50% AND CREATE AN oco LIMIT+STOP ORDER MANUALLY.')
 					console.log('------------------------------------------')
-					console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121')
-					console.log('------------------------------------------')
 					ws.close()
 					process.exit()
 				}).catch((err) => {
@@ -179,11 +177,7 @@ ws.once('auth', () => {
 					amount: amount1,
 					hidden: hiddenExitOrders,
 					type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
-				}, ws).catch((err) => {
-					console.error(err)
-					ws.close()
-					process.exit()
-				})
+				}, ws)
 
 				console.log(' Compiled stop order for ' + amount1 + ' at ' + stopPrice)
 
