@@ -124,11 +124,7 @@ ws.once('auth', () => {
 					amount: amount1,
 					hidden: hiddenExitOrders,
 					type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
-				}, ws).catch((err) => {
-					console.error(err)
-					ws.close()
-					process.exit()
-				})
+				}, ws)
 
 				console.log(' Compiled stop order for ' + amount1 + ' at ' + stopPrice)
 
