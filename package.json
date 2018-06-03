@@ -1,6 +1,6 @@
 {
   "name": "bitfinex-auto-stop-121-scale-out",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "main": "121ScaleOut.js",
   "repository": {
     "type": "git",
