@@ -2,7 +2,7 @@
 
 When entering a trade it is often desirable to scale out 50% when you have reached a 1:1 reward vs risk threshold. This makes the trade risk-free from this point on. 
 
-This Node JS script executes a long/short order when a trigger price is reached, then automatically places a stop order and a 'one-cancels-other' limit+stop order to protect your position from loss and scale-out 50% at 1:1.
+This Node JS script allows you to enter a position based on stop, market, or limit entry order, then automatically places a stop order and a 'one-cancels-other' limit+stop order to protect your position from loss, scaling out 50% at 1:1. It also monitors the ticker to ensure your stop isn't hit prior to entry.
 
 You will need to download and install the following:
 
@@ -13,8 +13,8 @@ To install and use the script:
 1. Download the [Bitfinex-Auto-Stop-121-Scale-Out library](https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/archive/master.zip) and unzip it somewhere on your computer (or clone the repository if you know how).
 2. Open your Terminal/Command Prompt app, `cd` to the directory you placed it and then execute `npm install` to install the nodeJS dependencies
 3. Open the ‘[121ScaleOut.js](https://raw.githubusercontent.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/master/121ScaleOut.js)’ file with a text editor (I use Sublime Text)
-4. Enter in your Bitfinex API key and secret in the `SETUP` section.
-5. Execute `node 121ScaleOut` for help on using the command line interface.
+4. Enter in your Bitfinex API key and secret in the `SETUP` section. Advanced users can create a `.env` file to place thier `API_KEY` and `API_SECRET` in (optional).
+5. Execute `node 121ScaleOut.js` for help on using the command line interface.
 
 IMPORTANT: Your computer must be left running and connected to the internet for the stop to be placed by this script.
 
