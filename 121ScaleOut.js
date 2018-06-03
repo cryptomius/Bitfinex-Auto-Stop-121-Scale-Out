@@ -50,17 +50,8 @@ const bfx = new BFX({
 	ws: {
 		autoReconnect: true,
 		seqAudit: false,
-		packetWDDelay: 10 * 1000
-	}
-})
-const bfx2 = new BFX({
-	apiKey: bitfinexAPIKey==''?API_KEY:bitfinexAPIKey,
-	apiSecret: bitfinexAPISecret==''?API_SECRET:bitfinexAPISecret,
-
-	ws: {
-		autoReconnect: true,
-		seqAudit: false,
-		packetWDDelay: 10 * 1000
+		packetWDDelay: 10 * 1000,
+		transform: true
 	}
 })
 
@@ -71,25 +62,26 @@ tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
 var entryOrderActive = false
 
 
-const ws = bfx.ws()
-const ws2 = bfx2.ws(2, { transform: true })
-
-ws2.on('open', () => {
-	ws2.subscribeTicker('t' + tradingPair)
+const ws = bfx.ws(2)
+const o = new Order({
+	cid: Date.now(),
+	symbol: 't' + tradingPair,
+	price: entryPrice,
+	amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
+	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
 })
-ws2.on('error', (err) => console.log(err))
-
 
 ws.on('error', (err) => console.log(err))
 ws.on('open', () => {
-	ws.auth.bind(ws)
-	if(entryLimitOrder == false){
-		ws2.open()
+	if (!entryLimitOrder) {
+		ws.subscribeTicker('t' + tradingPair)
 	}
+	ws.auth()
 })
 
-ws2.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
+ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
 	tickerObj = ticker.toJS()
+	console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ', stop price: ' + stopPrice)
 	if (cancelOnStop && entryOrderActive && entryLimitOrder == false) {
 		if ((entryDirection=='long' && tickerObj.lastPrice < stopPrice) || (entryDirection=='short' && tickerObj.lastPrice > stopPrice) ){
 			// kill the entry order as the stop has been hit prior to entry
@@ -97,32 +89,19 @@ ws2.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
 			o.cancel().then(() => {
 				console.log('Cancellation confirmed for order %d', o.cid)
 				ws.close()
-				ws2.close()
 				process.exit()
 			  }).catch((err) => {
 				console.log('WARNING - error cancelling order: %j', err)
 				ws.close()
-				ws2.close()
 				process.exit()
 			  })
 		}
-	} else {
-		console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ', stop price: ' + stopPrice)
 	}
 })
 
-const o = new Order({
-	cid: Date.now(),
-	symbol: 't' + tradingPair,
-	price: entryPrice,
-	amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
-}, ws)
-
 ws.once('auth', () => {
-
 	// Enable automatic updates
-	o.registerListeners()
+	o.registerListeners(ws)
 
 	o.on('update', () => {
 		console.log(`Order updated: ${o.serialize()}`)
@@ -133,9 +112,8 @@ ws.once('auth', () => {
 
 		if (o.status != 'CANCELED') {
 			entryOrderActive = false
-			if(entryLimitOrder == false){
-				ws2.unsubscribeTicker('t' + tradingPair)
-				ws2.close()
+			if (!entryLimitOrder) {
+				ws.unsubscribeTicker('t' + tradingPair)
 			}
 			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
