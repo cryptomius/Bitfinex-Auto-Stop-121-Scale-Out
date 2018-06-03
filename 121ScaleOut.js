@@ -155,10 +155,6 @@ ws.once('auth', () => {
 						console.log('------------------------------------------')
 						ws.close()
 						process.exit()
-					}).catch((err) => {
-						console.error(err)
-						ws.close()
-						process.exit()
 					})
 					
 
