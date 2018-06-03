@@ -73,17 +73,18 @@ const o = new Order({
 
 ws.on('error', (err) => console.log(err))
 ws.on('open', () => {
-	if (!entryLimitOrder) {
+	if (!entryLimitOrder && cancelOnStop) {
 		ws.subscribeTicker('t' + tradingPair)
+		console.log('Monitoring ' + tradingPair + ' for breach of stop level...')
 	}
 	ws.auth()
 })
 
 ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
 	tickerObj = ticker.toJS()
-	console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ', stop price: ' + stopPrice)
+	console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') stop price: ' + stopPrice)
 	if (cancelOnStop && entryOrderActive && entryLimitOrder == false) {
-		if ((entryDirection=='long' && tickerObj.lastPrice < stopPrice) || (entryDirection=='short' && tickerObj.lastPrice > stopPrice) ){
+		if ((entryDirection=='long' && tickerObj.bid <= stopPrice) || (entryDirection=='short' && tickerObj.ask >= stopPrice) ){
 			// kill the entry order as the stop has been hit prior to entry
 			console.log('Your stop price of ' + stopPrice + ' was breached prior to entry. Cancelling entry order.')
 			o.cancel().then(() => {
@@ -272,7 +273,7 @@ function parseArguments() {
 	// '-c' to cancel entry if stop level is breached
 	.boolean('c')
 	.alias('c', 'cancelonstop')
-	.describe('c', 'Cancel your entry order if the stop level is breached (ignored for limit entry orders)')
+	.describe('c', "Cancel your entry order if the stop level is breached (ignored for limit entry orders) use '-c false' to disable")
 	.default('c', true)
 	.wrap(process.stdout.columns)
 	.argv;
