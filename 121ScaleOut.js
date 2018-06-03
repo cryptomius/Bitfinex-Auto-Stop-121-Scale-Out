@@ -22,6 +22,7 @@ var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
 var targetMultiplier = argv.target
 var hiddenExitOrders = argv.hideexit
+var cancelOnStop = argv.cancelonstop
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -49,7 +50,8 @@ const bfx = new BFX({
 	ws: {
 		autoReconnect: true,
 		seqAudit: false,
-		packetWDDelay: 10 * 1000
+		packetWDDelay: 10 * 1000,
+		transform: true
 	}
 })
 
@@ -57,22 +59,50 @@ entryPrice 	= roundToSignificantDigitsBFX(entryPrice)
 stopPrice 	= roundToSignificantDigitsBFX(stopPrice)
 tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
 
-const ws = bfx.ws()
+var entryOrderActive = false
+
+
+const ws = bfx.ws(2)
+const o = new Order({
+	cid: Date.now(),
+	symbol: 't' + tradingPair,
+	price: entryPrice,
+	amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
+	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
+})
 
 ws.on('error', (err) => console.log(err))
-ws.on('open', ws.auth.bind(ws))
+ws.on('open', () => {
+	if (!entryLimitOrder && cancelOnStop) {
+		ws.subscribeTicker('t' + tradingPair)
+		console.log('Monitoring ' + tradingPair + ' for breach of stop level...')
+	}
+	ws.auth()
+})
+
+ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
+	tickerObj = ticker.toJS()
+	console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') stop price: ' + stopPrice)
+	if (cancelOnStop && entryOrderActive && entryLimitOrder == false) {
+		if ((entryDirection=='long' && tickerObj.bid <= stopPrice) || (entryDirection=='short' && tickerObj.ask >= stopPrice) ){
+			// kill the entry order as the stop has been hit prior to entry
+			console.log('Your stop price of ' + stopPrice + ' was breached prior to entry. Cancelling entry order.')
+			o.cancel().then(() => {
+				console.log('Cancellation confirmed for order %d', o.cid)
+				ws.close()
+				process.exit()
+			  }).catch((err) => {
+				console.log('WARNING - error cancelling order: %j', err)
+				ws.close()
+				process.exit()
+			  })
+		}
+	}
+})
 
 ws.once('auth', () => {
-	const o = new Order({
-		cid: Date.now(),
-		symbol: 't' + tradingPair,
-		price: entryPrice,
-		amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-		type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
-	}, ws)
-
 	// Enable automatic updates
-	o.registerListeners()
+	o.registerListeners(ws)
 
 	o.on('update', () => {
 		console.log(`Order updated: ${o.serialize()}`)
@@ -82,6 +112,10 @@ ws.once('auth', () => {
 		console.log(`Order status: ${o.status}`)
 
 		if (o.status != 'CANCELED') {
+			entryOrderActive = false
+			if (!entryLimitOrder) {
+				ws.unsubscribeTicker('t' + tradingPair)
+			}
 			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			if(o.priceAvg == null && entryPrice==0){
@@ -104,8 +138,6 @@ ws.once('auth', () => {
 
 				o4.submit().then(() => {
 					console.log('Submitted 100% stop order. YOU MUST REDUCE THIS TO 50% AND CREATE AN oco LIMIT+STOP ORDER MANUALLY.')
-					console.log('------------------------------------------')
-					console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121')
 					console.log('------------------------------------------')
 					ws.close()
 					process.exit()
@@ -165,12 +197,14 @@ ws.once('auth', () => {
 				})
 			}
 		} else {
+			console.log('Entry order cancelled.')
 			ws.close()
 			process.exit()
 		}
 	})
 
 	o.submit().then(() => {
+		entryOrderActive = true
 		console.log(`submitted entry order ${o.id}`)
 	}).catch((err) => {
 		console.error(err)
@@ -232,6 +266,11 @@ function parseArguments() {
 	.alias('h', 'hideexit')
 	.describe('h', 'Hide your target and stop orders from the orderbook')
 	.default('h', false)
+	// '-c' to cancel entry if stop level is breached
+	.boolean('c')
+	.alias('c', 'cancelonstop')
+	.describe('c', "Cancel your entry order if the stop level is breached (ignored for limit entry orders) use '-c false' to disable")
+	.default('c', true)
 	.wrap(process.stdout.columns)
 	.argv;
 }

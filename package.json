@@ -1,6 +1,6 @@
 {
   "name": "bitfinex-auto-stop-121-scale-out",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "main": "121ScaleOut.js",
   "repository": {
     "type": "git",
@@ -15,6 +15,7 @@
   "dependencies": {
     "bitfinex-api-node": "2.0.0-beta.1",
     "dotenv": "^4.0.0",
-    "yargs": "^11.0.0"
+    "yargs": "^11.0.0",
+    "socks-proxy-agent": "^4.0.1"
   }
 }
