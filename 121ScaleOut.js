@@ -20,7 +20,7 @@ var stopPrice = argv.stop
 var entryDirection = argv.short ? 'short' : 'long'
 var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
-var targetMultiplier = argv.target
+//var targetMultiplier = argv.target
 var hiddenExitOrders = argv.hideexit
 var cancelOnStop = argv.cancelonstop
 
@@ -120,7 +120,7 @@ ws.once('auth', () => {
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			if(o.priceAvg == null && entryPrice==0){
 				amount4 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount))
-				console.log(' Average price of entry was NOT RETURNED by Bitfinex! 1:' + targetMultiplier + ' oco target cannot be calculated. :-(')
+				console.log(' Average price of entry was NOT RETURNED by Bitfinex! Scale-out target cannot be calculated. :-(')
 				console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
 
 				console.log('Please send this to @cryptomius to help debug:')
@@ -135,6 +135,7 @@ ws.once('auth', () => {
 					hidden: hiddenExitOrders,
 					type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
 				}, ws)
+				o4.setReduceOnly(true)
 
 				o4.submit().then(() => {
 					console.log('Submitted 100% stop order. YOU MUST REDUCE THIS TO 50% AND CREATE AN oco LIMIT+STOP ORDER MANUALLY.')
@@ -157,6 +158,7 @@ ws.once('auth', () => {
 					hidden: hiddenExitOrders,
 					type: Order.type[(!margin?"EXCHANGE_":"") + "STOP"]
 				}, ws)
+				o2.setReduceOnly(true)
 
 				console.log(' Compiled stop order for ' + amount1 + ' at ' + stopPrice)
 
@@ -164,21 +166,27 @@ ws.once('auth', () => {
 					console.log(' Average price of entry = ' + o.priceAvg)
 					entryPrice = o.priceAvg
 					console.log('Submitted 50% stop order')
-					price1 = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier))
+					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) 
+					if ( entryDirection == 'long'){
+						targetPrice = (entryPrice + (entryPrice - stopPrice)) + (((entryPrice * bfxExchangeTakerFee) / tradeAmount) * 4)
+					}else {
+						targetPrice = (entryPrice - (stopPrice - entryPrice)) - (((entryPrice * bfxExchangeTakerFee) / tradeAmount) * 4)
+					}
 					amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 
 					const o3 = new Order({
 						cid: Date.now(),
 						symbol: 't' + tradingPair,
-						price: price1, // scale-out target price (1:1)
+						price: targetPrice, // scale-out target price (1:1)
 						amount: amount2,
 						type: Order.type[(!margin?"EXCHANGE_":"") + "LIMIT"],
 						oco: true,
 						hidden: hiddenExitOrders,
 						priceAuxLimit: stopPrice
 					}, ws)
+					o3.setReduceOnly(true)
 
-					console.log(' Compiled oco limit order for ' + amount2 + ' at ' + price1 + ' and stop at ' + stopPrice)
+					console.log(' Compiled oco limit order for ' + amount2 + ' at ' + targetPrice + ' and stop at ' + stopPrice)
 
 					o3.submit().then(() => {
 						console.log('Submitted 50% 1:1 + stop (oco) limit order')
@@ -215,6 +223,10 @@ ws.once('auth', () => {
 if (margin == false && entryDirection == 'short') {
 	console.log('You must use margin=true if you want to go short.')
 	process.exit()
+}else if (entryDirection == 'short' && (entryPrice - (stopPrice - entryPrice)) - (((entryPrice * bfxExchangeTakerFee) / tradeAmount) * 4) < 0){
+	// target price is less than 0 (can occur when amount is too low)
+	console.log('Amount is too low to calculate a valid target price.')
+	process.exit()
 }else{
 	ws.open()
 }
@@ -243,9 +255,9 @@ function parseArguments() {
 	.alias('s', 'stop')
 	.describe('s', 'Set stop price')
 	// '-t <targetMultiplier>'
-	.alias('t', 'target')
-	.describe('t', 'Set target multiplier eg. 1.4 for 1:1.4 scale-out of 50%. Default 1:1.')
-	.default('t', 1)
+	//.alias('t', 'target')
+	//.describe('t', 'Set target multiplier eg. 1.4 for 1:1.4 scale-out of 50%. Default 1:1.')
+	//.default('t', 1)
 	// '-S' for 'short' (entry sell) entry direction. Default direction is 'long' (entry buy)
 	.boolean('S')
 	.alias('S', 'short')
