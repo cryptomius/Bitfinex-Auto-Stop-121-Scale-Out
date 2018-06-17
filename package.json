@@ -2,6 +2,15 @@
   "name": "bitfinex-auto-stop-121-scale-out",
   "version": "1.6.0",
   "main": "121ScaleOut.js",
+  "scripts": {
+    "121": "node 121ScaleOut.js",
+    "cradle-long": "node 121ScaleOut.js",
+    "cradle-short": "node 121ScaleOut.js -S",
+    "breakout-long": "node 121ScaleOut.js",
+    "breakout-short": "node 121ScaleOut.js -S",
+    "booster-long": "node 121ScaleOut.js -l",
+    "booster-short": "node 121ScaleOut.js -l -S"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out.git"
