@@ -168,7 +168,7 @@ ws.once('auth', () => {
 					console.log('Submitted 50% stop order')
 					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) 
 					if ( entryDirection == 'long'){
-						targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
+						targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}else {
 						targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}
