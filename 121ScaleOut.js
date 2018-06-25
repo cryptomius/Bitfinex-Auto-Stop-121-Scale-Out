@@ -172,6 +172,7 @@ ws.once('auth', () => {
 					}else {
 						targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}
+					targetPrice = roundToSignificantDigitsBFX(targetPrice)
 					amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
 
 					const o3 = new Order({
