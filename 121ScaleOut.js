@@ -17,12 +17,12 @@ var tradingPair = argv.pair.toUpperCase()
 var tradeAmount	= argv.amount
 var entryPrice = argv.entry
 var stopPrice = argv.stop
-var entryDirection = argv.short ? 'short' : 'long'
 var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
 //var targetMultiplier = argv.target
 var hiddenExitOrders = argv.hideexit
 var cancelOnStop = argv.cancelonstop
+var isShort = entryPrice < stopPrice
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -67,7 +67,7 @@ const o = new Order({
 	cid: Date.now(),
 	symbol: 't' + tradingPair,
 	price: entryPrice,
-	amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
+	amount: !isShort?tradeAmount:-tradeAmount,
 	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
 })
 
@@ -84,7 +84,7 @@ ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
 	tickerObj = ticker.toJS()
 	console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') stop price: ' + stopPrice)
 	if (cancelOnStop && entryOrderActive && entryLimitOrder == false) {
-		if ((entryDirection=='long' && tickerObj.bid <= stopPrice) || (entryDirection=='short' && tickerObj.ask >= stopPrice) ){
+		if ((!isShort && tickerObj.bid <= stopPrice) || (isShort && tickerObj.ask >= stopPrice) ){
 			// kill the entry order as the stop has been hit prior to entry
 			console.log('Your stop price of ' + stopPrice + ' was breached prior to entry. Cancelling entry order.')
 			o.cancel().then(() => {
@@ -119,7 +119,7 @@ ws.once('auth', () => {
 			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			if(o.priceAvg == null && entryPrice==0){
-				amount4 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount))
+				amount4 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount))
 				console.log(' Average price of entry was NOT RETURNED by Bitfinex! Scale-out target cannot be calculated. :-(')
 				console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
 
@@ -149,7 +149,7 @@ ws.once('auth', () => {
 				})
 
 			} else {
-				amount1 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
+				amount1 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount)/2)
 				const o2 = new Order({
 					cid: Date.now(),
 					symbol: 't' + tradingPair,
@@ -167,13 +167,13 @@ ws.once('auth', () => {
 					entryPrice = o.priceAvg
 					console.log('Submitted 50% stop order')
 					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) 
-					if ( entryDirection == 'long'){
+					if (!isShort){
 						targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}else {
 						targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}
 					targetPrice = roundToSignificantDigitsBFX(targetPrice)
-					amount2 = roundToSignificantDigitsBFX(((entryDirection=='long')?-tradeAmount:tradeAmount)/2)
+					amount2 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount)/2)
 
 					const o3 = new Order({
 						cid: Date.now(),
@@ -221,10 +221,10 @@ ws.once('auth', () => {
 	})
 })
 
-if (margin == false && entryDirection == 'short') {
+if (margin == false && isShort) {
 	console.log('You must use margin=true if you want to go short.')
 	process.exit()
-}else if (entryDirection == 'short' && (entryPrice - (stopPrice - entryPrice)) - (((entryPrice * bfxExchangeTakerFee) / tradeAmount) * 4) < 0){
+}else if (isShort && (entryPrice - (stopPrice - entryPrice)) - (((entryPrice * bfxExchangeTakerFee) / tradeAmount) * 4) < 0){
 	// target price is less than 0 (can occur when amount is too low)
 	console.log('Amount is too low to calculate a valid target price.')
 	process.exit()
@@ -259,11 +259,6 @@ function parseArguments() {
 	//.alias('t', 'target')
 	//.describe('t', 'Set target multiplier eg. 1.4 for 1:1.4 scale-out of 50%. Default 1:1.')
 	//.default('t', 1)
-	// '-S' for 'short' (entry sell) entry direction. Default direction is 'long' (entry buy)
-	.boolean('S')
-	.alias('S', 'short')
-	.describe('S', 'Enter short (entry sell) instead of long (entry buy) position')
-	.default('S', false)
 	// '-l' for limit-order entry
 	.boolean('l')
 	.alias('l', 'limit')
