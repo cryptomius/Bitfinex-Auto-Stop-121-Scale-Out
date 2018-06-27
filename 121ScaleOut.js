@@ -19,7 +19,7 @@ var entryPrice = argv.entry
 var stopPrice = argv.stop
 var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
-var entryMarketOrder = argv.market
+var entryStopLimitTrigger = argv.trigger
 var hiddenExitOrders = argv.hideexit
 var cancelOnStop = argv.cancelonstop
 var isShort = entryPrice < stopPrice
@@ -66,10 +66,11 @@ entryOrderObj = {
 	symbol: 't' + tradingPair,
 	price: entryPrice,
 	amount: !isShort?tradeAmount:-tradeAmount,
-	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":entryMarketOrder?"STOP":"STOP_LIMIT")]
+	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":entryStopLimitTrigger==0?"STOP":"STOP_LIMIT")]
 }
-if(entryMarketOrder==false){ // stop limit entry
-	entryOrderObj['priceAuxLimit'] = entryPrice;
+if(entryStopLimitTrigger!=0){ // stop limit entry
+	entryOrderObj['priceAuxLimit'] = roundToSignificantDigitsBFX(entryStopLimitTrigger);
+	console.log('entryStopLimitTrigger = ' + entryStopLimitTrigger + ' entryPrice = ' + entryPrice)
 }
 
 const ws = bfx.ws(2)
@@ -261,11 +262,11 @@ function parseArguments() {
 	.alias('l', 'limit')
 	.describe('l', 'Place limit-order instead of a market stop-order entry (ignored if entryPrice is 0)')
 	.default('l', false)
-	// '-m' for market stop or stop limit entry
-	.boolean('m')
-	.alias('m', 'market')
-	.describe('m', "Omit or use '-m true' for stop-based entry (default), use '-m false' for stop-limit entry")
-	.default('m', true)
+	// '-t' for stop limit entry trigger price
+	.number('t')
+	.alias('t', 'trigger')
+	.describe('t', "Trigger price for stop-limit entry")
+	.default('t', 0)
 	// '-x' for exchange trading
 	.boolean('x')
 	.alias('x', 'exchange')
