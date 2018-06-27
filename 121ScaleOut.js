@@ -19,6 +19,7 @@ var entryPrice = argv.entry
 var stopPrice = argv.stop
 var entryDirection = argv.short ? 'short' : 'long'
 var entryLimitOrder	= argv.limit
+var entryMarketOrder = argv.market
 var margin = !argv.exchange
 //var targetMultiplier = argv.target
 var hiddenExitOrders = argv.hideexit
@@ -68,7 +69,7 @@ const o = new Order({
 	symbol: 't' + tradingPair,
 	price: entryPrice,
 	amount: (entryDirection=='long')?tradeAmount:-tradeAmount,
-	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
+	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":entryMarketOrder?"STOP":"STOP_LIMIT")]
 })
 
 ws.on('error', (err) => console.log(err))
@@ -166,8 +167,8 @@ ws.once('auth', () => {
 					console.log(' Average price of entry = ' + o.priceAvg)
 					entryPrice = o.priceAvg
 					console.log('Submitted 50% stop order')
-					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) 
-					if ( entryDirection == 'long'){
+					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) // no fees
+					if ( entryDirection == 'long'){ // with fees:
 						targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}else {
 						targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
@@ -267,8 +268,13 @@ function parseArguments() {
 	// '-l' for limit-order entry
 	.boolean('l')
 	.alias('l', 'limit')
-	.describe('l', 'Place limit-order instead of a market stop-order entry (ignored if entryPrice is 0)')
+	.describe('l', 'Place limit-order for entry instead of a market stop-order entry (ignored if entryPrice is 0)')
 	.default('l', false)
+	// '-m' true = market stop entry (false = stop-limit entry)
+	.boolean('m')
+	.alias('m', 'market')
+	.describe('m', "Omit or use '-m true' for stop-based entry (default), use '-m false' for stop-limit entry")
+	.default('m', true)
 	// '-x' for exchange trading
 	.boolean('x')
 	.alias('x', 'exchange')
