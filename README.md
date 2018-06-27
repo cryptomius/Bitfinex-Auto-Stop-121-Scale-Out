@@ -20,9 +20,11 @@ This will add the `bitfinex-auto-stop-121-scale-out` command to your system path
 
 Create a file called `.env` in the folder from where you want to run `bitfinex-auto-stop-121-scale-out`, and add your [Bitfinex API key](https://support.bitfinex.com/hc/en-us/articles/115002349625-API-Key-Setup-Login) in the following format:
 ```
-API_KEY={Bitfinex API Key}
-API_SECRET={Bitfinex Secret Key}
+API_KEY='{Bitfinex API Key}'
+API_SECRET='{Bitfinex Secret Key}'
 ```
+
+Your Bitfinex key will need 'Orders' and 'Margin Trading' Read and Write permissions.
 
 ## Usage
 
