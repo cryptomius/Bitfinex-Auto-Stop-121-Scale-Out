@@ -3,8 +3,8 @@
 //  https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out
 
 // SETUP
-const bitfinexAPIKey			= ''			// leave blank to use API_KEY from .env file
-const bitfinexAPISecret		= ''			// leave blank to use API_SECRET from .env file
+const bitfinexAPIKey		= ''		// leave blank to use API_KEY from .env file
+const bitfinexAPISecret		= ''		// leave blank to use API_SECRET from .env file
 // END SETUP
 
 // run using `node 121ScaleOut` 
@@ -19,7 +19,7 @@ var entryPrice = argv.entry
 var stopPrice = argv.stop
 var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
-//var targetMultiplier = argv.target
+var entryMarketOrder = argv.market
 var hiddenExitOrders = argv.hideexit
 var cancelOnStop = argv.cancelonstop
 var isShort = entryPrice < stopPrice
@@ -61,15 +61,20 @@ tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
 
 var entryOrderActive = false
 
-
-const ws = bfx.ws(2)
-const o = new Order({
+entryOrderObj = {
 	cid: Date.now(),
 	symbol: 't' + tradingPair,
 	price: entryPrice,
 	amount: !isShort?tradeAmount:-tradeAmount,
-	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":"STOP")]
-})
+	type: Order.type[(!margin?"EXCHANGE_":"") + (entryPrice==0?"MARKET":entryLimitOrder?"LIMIT":entryMarketOrder?"STOP":"STOP_LIMIT")]
+}
+if(entryMarketOrder==false){ // stop limit entry
+	entryOrderObj['priceAuxLimit'] = entryPrice;
+}
+
+const ws = bfx.ws(2)
+const o = new Order(entryOrderObj)
+
 
 ws.on('error', (err) => console.log(err))
 ws.on('open', () => {
@@ -166,8 +171,8 @@ ws.once('auth', () => {
 					console.log(' Average price of entry = ' + o.priceAvg)
 					entryPrice = o.priceAvg
 					console.log('Submitted 50% stop order')
-					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) 
-					if (!isShort){
+					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) // no fees
+					if (!isShort){ // with fees:
 						targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 					}else {
 						targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
@@ -211,7 +216,7 @@ ws.once('auth', () => {
 			process.exit()
 		}
 	})
-
+	
 	o.submit().then(() => {
 		entryOrderActive = true
 		console.log(`submitted entry order ${o.id}`)
@@ -223,10 +228,6 @@ ws.once('auth', () => {
 
 if (margin == false && isShort) {
 	console.log('You must use margin=true if you want to go short.')
-	process.exit()
-}else if (isShort && (entryPrice - (stopPrice - entryPrice)) - (((entryPrice * bfxExchangeTakerFee) / tradeAmount) * 4) < 0){
-	// target price is less than 0 (can occur when amount is too low)
-	console.log('Amount is too low to calculate a valid target price.')
 	process.exit()
 }else{
 	ws.open()
@@ -255,15 +256,16 @@ function parseArguments() {
 	.number('s')
 	.alias('s', 'stop')
 	.describe('s', 'Set stop price')
-	// '-t <targetMultiplier>'
-	//.alias('t', 'target')
-	//.describe('t', 'Set target multiplier eg. 1.4 for 1:1.4 scale-out of 50%. Default 1:1.')
-	//.default('t', 1)
 	// '-l' for limit-order entry
 	.boolean('l')
 	.alias('l', 'limit')
 	.describe('l', 'Place limit-order instead of a market stop-order entry (ignored if entryPrice is 0)')
 	.default('l', false)
+	// '-m' for market stop or stop limit entry
+	.boolean('m')
+	.alias('m', 'market')
+	.describe('m', "Omit or use '-m true' for stop-based entry (default), use '-m false' for stop-limit entry")
+	.default('m', true)
 	// '-x' for exchange trading
 	.boolean('x')
 	.alias('x', 'exchange')
