@@ -4,17 +4,29 @@ When entering a trade it is often desirable to scale out 50% when you have reach
 
 This Node JS script allows you to enter a position based on stop, market, or limit entry order, then automatically places a stop order and a 'one-cancels-other' limit+stop order to protect your position from loss, scaling out 50% at 1:1. It also monitors the ticker to ensure your stop isn't hit prior to entry.
 
-You will need to download and install the following:
+## Installation
 
-* nodeJS: [https://nodejs.org/en/download/](https://nodejs.org/en/download/)
+Prerequisites: [Node.js](https://nodejs.org/en/)
 
-To install and use the script:
+The easiest way to get started is to install `bitfinex-auto-stop-121-scale-out` globally. Open a terminal/command prompt and run the command below.
+**Note:** You may need to use `sudo` (for macOS, *nix etc), or run your command shell as Administrator (for Windows) to do this.
+```
+npm install -g bitfinex-auto-stop-121-scale-out
+```
 
-1. Download the [Bitfinex-Auto-Stop-121-Scale-Out library](https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/archive/master.zip) and unzip it somewhere on your computer (or clone the repository if you know how).
-2. Open your Terminal/Command Prompt app, `cd` to the directory you placed it and then execute `npm install` to install the nodeJS dependencies
-3. Open the ‘[121ScaleOut.js](https://raw.githubusercontent.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out/master/121ScaleOut.js)’ file with a text editor (I use Sublime Text)
-4. Enter in your Bitfinex API key and secret in the `SETUP` section. Advanced users can create a `.env` file to place thier `API_KEY` and `API_SECRET` in (optional).
-5. Execute `node 121ScaleOut.js` for help on using the command line interface.
+This will add the `bitfinex-auto-stop-121-scale-out` command to your system path, allowing it to be run from any folder.
+
+## Configuration
+
+Create a file called `.env` in the folder from where you want to run `bitfinex-auto-stop-121-scale-out`, and add your [Bitfinex API key](https://support.bitfinex.com/hc/en-us/articles/115002349625-API-Key-Setup-Login) in the following format:
+```
+API_KEY={Bitfinex API Key}
+API_SECRET={Bitfinex Secret Key}
+```
+
+## Usage
+
+Execute `121ScaleOut` for help on using the command line interface.
 
 IMPORTANT: Your computer must be left running and connected to the internet for the stop to be placed by this script.
 

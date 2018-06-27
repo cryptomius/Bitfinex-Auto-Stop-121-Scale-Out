@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // This script places an order (stop or limit-based) and once filled, places a stop for 50% and an 
 //  OCO limit+stop order for the other 50% at 1:1 risk/reward to eliminate risk from your trade early
 //  https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out
@@ -6,8 +7,6 @@
 const bitfinexAPIKey		= ''		// leave blank to use API_KEY from .env file
 const bitfinexAPISecret		= ''		// leave blank to use API_SECRET from .env file
 // END SETUP
-
-// run using `node 121ScaleOut` 
 
 ////////////////////////////////////
 
@@ -236,8 +235,8 @@ if (margin == false && isShort) {
 
 function parseArguments() {
 	return require('yargs')
-	.usage('Usage: node $0')
-	.example('node $0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a long market stop entry order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 50% scale-out target.')
+	.usage('Usage: $0')
+	.example('$0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a long market stop entry order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 50% scale-out target.')
 	// '-p <tradingPair>'
 	.demand('pair')
 	.alias('p', 'pair')
