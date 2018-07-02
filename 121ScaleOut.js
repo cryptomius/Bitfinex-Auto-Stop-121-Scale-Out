@@ -197,7 +197,7 @@ ws.once('auth', () => {
 					o3.submit().then(() => {
 						console.log('Submitted 50% 1:1 + stop (oco) limit order')
 						console.log('------------------------------------------')
-						console.log('Good luck! Making gains? Drop me a tip: https://tinyurl.com/bfx121')
+						console.log('Good luck! Making gains? Drop me a tip! :-) PayPal: https://www.paypal.me/sydneyshan Crypto: https://tinyurl.com/bfx121')
 						console.log('------------------------------------------')
 						ws.close()
 						process.exit()
