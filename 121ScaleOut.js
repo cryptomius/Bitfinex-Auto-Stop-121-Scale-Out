@@ -20,7 +20,7 @@ var entryLimitOrder	= argv.limit
 var margin = !argv.exchange
 var entryStopLimitTrigger = argv.trigger
 var hiddenExitOrders = argv.hideexit
-var cancelOnStop = argv.cancelonstop
+var cancelPrice = argv.cancelPrice
 var isShort = entryPrice < stopPrice
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
@@ -57,6 +57,7 @@ const bfx = new BFX({
 entryPrice 	= roundToSignificantDigitsBFX(entryPrice)
 stopPrice 	= roundToSignificantDigitsBFX(stopPrice)
 tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
+cancelPrice = cancelPrice ? roundToSignificantDigitsBFX(cancelPrice) : stopPrice
 
 var entryOrderActive = false
 
@@ -78,20 +79,19 @@ const o = new Order(entryOrderObj)
 
 ws.on('error', (err) => console.log(err))
 ws.on('open', () => {
-	if (!entryLimitOrder && cancelOnStop) {
-		ws.subscribeTicker('t' + tradingPair)
-		console.log('Monitoring ' + tradingPair + ' for breach of stop level...')
-	}
+	ws.subscribeTicker('t' + tradingPair)
+	console.log('Monitoring ' + tradingPair + ' for breach of cancel price: ' + cancelPrice)
 	ws.auth()
 })
 
 ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
 	tickerObj = ticker.toJS()
-	console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') stop price: ' + stopPrice)
-	if (cancelOnStop && entryOrderActive && entryLimitOrder == false) {
-		if ((!isShort && tickerObj.bid <= stopPrice) || (isShort && tickerObj.ask >= stopPrice) ){
-			// kill the entry order as the stop has been hit prior to entry
-			console.log('Your stop price of ' + stopPrice + ' was breached prior to entry. Cancelling entry order.')
+	if (entryOrderActive) {
+		console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') cancel price: ' + cancelPrice)
+
+		if ((entryPrice > cancelPrice && tickerObj.bid <= cancelPrice) || (entryPrice < cancelPrice && tickerObj.ask >= cancelPrice)) {
+			// Cancel the entry order if the cancel price is breached hit prior to entry
+			console.log('Your cancel price of ' + cancelPrice + ' was breached prior to entry. Cancelling entry order.')
 			o.cancel().then(() => {
 				console.log('Cancellation confirmed for order %d', o.cid)
 				ws.close()
@@ -118,9 +118,7 @@ ws.once('auth', () => {
 
 		if (o.status != 'CANCELED') {
 			entryOrderActive = false
-			if (!entryLimitOrder) {
-				ws.unsubscribeTicker('t' + tradingPair)
-			}
+			ws.unsubscribeTicker('t' + tradingPair)
 			console.log('-- POSITION ENTERED --')
 			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
 			if(o.priceAvg == null && entryPrice==0){
@@ -276,11 +274,11 @@ function parseArguments() {
 	.alias('h', 'hideexit')
 	.describe('h', 'Hide your target and stop orders from the orderbook')
 	.default('h', false)
-	// '-c' to cancel entry if stop level is breached
-	.boolean('c')
-	.alias('c', 'cancelonstop')
-	.describe('c', "Cancel your entry order if the stop level is breached (ignored for limit entry orders) use '-c false' to disable")
-	.default('c', true)
+	// '-c <cancelPrice>' price at which to cancel entry order if breached.
+	.number('c')
+	.alias('c', 'cancel-price')
+	.describe('c', "Set price at which to cancel entry order if breached (defaults to stop price)")
+	.default('c', 0)
 	.wrap(process.stdout.columns)
 	.argv;
 }
