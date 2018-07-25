@@ -36,7 +36,7 @@ API_SECRET='<b>BITFINEX_API_SECRET</b>'
 
 ## Usage
 
-Open your Terminal/Console, paste `121ScaleOut`, and hit the Return key to display instructions on how to use the script.
+Open your Terminal/Console, paste `bitfinex-auto-stop-121-scale-out`, and hit the Return key to display instructions on how to use the script.
 
 IMPORTANT: Your computer must be left running and connected to the internet for the stop to be placed by this script.
 
