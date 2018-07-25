@@ -40,6 +40,20 @@ Open your Terminal/Console, paste `121ScaleOut`, and hit the Return key to displ
 
 IMPORTANT: Your computer must be left running and connected to the internet for the stop to be placed by this script.
 
+## Updates
+
+To ensure you're running the latest version of this script, run the following command in your Terminal/Console:
+
+<pre>
+npm update -g bitfinex-auto-stop-121-scale-out
+</pre>
+
+**Note:** You may need to use `sudo` (for MacOS, *nix etc), or run your command shell as Administrator (for Windows) to do this. For example:
+
+<pre>
+<b>sudo</b> npm update -g bitfinex-auto-stop-121-scale-out
+</pre>
+
 [More Crypto Tools by @cryptomius](https://github.com/cryptomius/Cryptomius-Crypto-Tools-Overview)
 
 ---
