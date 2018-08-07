@@ -22,6 +22,7 @@ var entryStopLimitTrigger = argv.trigger
 var hiddenExitOrders = argv.hideexit
 var cancelPrice = argv.cancelPrice
 var isShort = entryPrice < stopPrice
+var noScaleOut = argv.noScaleOut
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -120,15 +121,20 @@ ws.once('auth', () => {
 			entryOrderActive = false
 			ws.unsubscribeTicker('t' + tradingPair)
 			console.log('-- POSITION ENTERED --')
-			if(!margin){ tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
-			if(o.priceAvg == null && entryPrice==0){
+			if (!margin) { tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
+			if (o.priceAvg == null && entryPrice==0) {
 				amount4 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount))
-				console.log(' Average price of entry was NOT RETURNED by Bitfinex! Scale-out target cannot be calculated. :-(')
-				console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
+				if(noScaleOut != true){
+					console.log(' Average price of entry was NOT RETURNED by Bitfinex! Scale-out target cannot be calculated. :-(')
+					console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
 
-				console.log('Please send this to @cryptomius to help debug:')
-				console.log(argv)
-				console.log(o)
+					console.log('Please send this to @cryptomius to help debug:')
+					console.log(argv)
+					console.log(o)
+				} else {
+					// no 1:1 scale out (noScaleOut == true)
+					console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
+				}
 
 				const o4 = new Order({
 					cid: Date.now(),
@@ -141,7 +147,11 @@ ws.once('auth', () => {
 				o4.setReduceOnly(true)
 
 				o4.submit().then(() => {
-					console.log('Submitted 100% stop order. YOU MUST REDUCE THIS TO 50% AND CREATE AN oco LIMIT+STOP ORDER MANUALLY.')
+					if (noScaleOut != true) {
+						console.log('Submitted 100% stop order. YOU MUST REDUCE THIS TO 50% AND CREATE AN oco LIMIT+STOP ORDER MANUALLY.')
+					} else {
+						console.log('Submitted 100% stop order.')
+					}
 					console.log('------------------------------------------')
 					ws.close()
 					process.exit()
@@ -171,9 +181,13 @@ ws.once('auth', () => {
 					console.log('Submitted 50% stop order')
 					//targetPrice = roundToSignificantDigitsBFX(entryPrice-((stopPrice-entryPrice)*targetMultiplier)) // no fees
 					if (!isShort){ // with fees:
-						targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
+						// long
+						//targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
+						targetPrice = (entryPrice * 2) - stopPrice + (entryPrice * 0.002 * 4)
 					}else {
-						targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
+						// short
+						//targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
+						targetPrice = (entryPrice * 2) - stopPrice - (stopPrice * 0.002 * 4)
 					}
 					targetPrice = roundToSignificantDigitsBFX(targetPrice)
 					amount2 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount)/2)
@@ -279,6 +293,11 @@ function parseArguments() {
 	.alias('c', 'cancel-price')
 	.describe('c', "Set price at which to cancel entry order if breached (defaults to stop price)")
 	.default('c', 0)
+	// '-n <noScaleOut>' skip scale-out.
+	.boolean('n')
+	.alias('n', 'no-scale-out')
+	.describe('n', "Set to true to skip scale-out (100% stop only)")
+	.default('n', false)
 	.wrap(process.stdout.columns)
 	.argv;
 }
