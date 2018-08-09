@@ -22,7 +22,7 @@ var entryStopLimitTrigger = argv.trigger
 var hiddenExitOrders = argv.hideexit
 var cancelPrice = argv.cancelPrice
 var isShort = entryPrice < stopPrice
-var noScaleOut = argv.noScaleOut
+var noScaleOut = !argv.noScaleOut
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
