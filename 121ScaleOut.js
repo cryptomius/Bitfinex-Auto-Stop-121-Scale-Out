@@ -22,7 +22,7 @@ var entryStopLimitTrigger = argv.trigger
 var hiddenExitOrders = argv.hideexit
 var cancelPrice = argv.cancelPrice
 var isShort = entryPrice < stopPrice
-var noScaleOut = !argv.noScaleOut
+var noScaleOut = !argv.scaleOut
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -296,7 +296,7 @@ function parseArguments() {
 	// '-n <noScaleOut>' skip scale-out.
 	.boolean('n')
 	.alias('n', 'no-scale-out')
-	.describe('n', "Set to true to skip scale-out (100% stop only)")
+	.describe('n', "Skip scale-out (100% stop only)")
 	.default('n', false)
 	.wrap(process.stdout.columns)
 	.argv;
