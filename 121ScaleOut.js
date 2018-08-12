@@ -22,7 +22,9 @@ var entryStopLimitTrigger = argv.trigger
 var hiddenExitOrders = argv.hideexit
 var cancelPrice = argv.cancelPrice
 var isShort = entryPrice < stopPrice
-var noScaleOut = !argv.scaleOut
+var noScaleOut = argv.disableScaleOut
+
+console.log('1:1 scale out mode: ' + (noScaleOut?'OFF':'ON'))
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee 
 
@@ -121,19 +123,19 @@ ws.once('auth', () => {
 			entryOrderActive = false
 			ws.unsubscribeTicker('t' + tradingPair)
 			console.log('-- POSITION ENTERED --')
-			if (!margin) { tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
-			if (o.priceAvg == null && entryPrice==0) {
-				amount4 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount))
+			if ( !margin ) { tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
+			if ( ( noScaleOut == true ) || ( o.priceAvg == null && entryPrice == 0 )) {
+				amount4 = roundToSignificantDigitsBFX( ( !isShort ? -tradeAmount : tradeAmount ) )
 				if(noScaleOut != true){
 					console.log(' Average price of entry was NOT RETURNED by Bitfinex! Scale-out target cannot be calculated. :-(')
-					console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
+					console.log(" Placing a SINGLE stop order at " + stopPrice + " for " + amount4 + " (100%) to protect your position")
 
 					console.log('Please send this to @cryptomius to help debug:')
 					console.log(argv)
 					console.log(o)
 				} else {
 					// no 1:1 scale out (noScaleOut == true)
-					console.log(" Placing a SINGLE stop order at " + stopPrice + "for " + amount4 + " (100%) to protect your position")
+					console.log(" Placing a SINGLE stop order at " + stopPrice + " for " + amount4 + " (100%) to protect your position")
 				}
 
 				const o4 = new Order({
@@ -162,7 +164,7 @@ ws.once('auth', () => {
 				})
 
 			} else {
-				amount1 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount)/2)
+				amount1 = roundToSignificantDigitsBFX( ( !isShort ? -tradeAmount : tradeAmount ) / 2 )
 				const o2 = new Order({
 					cid: Date.now(),
 					symbol: 't' + tradingPair,
@@ -293,10 +295,10 @@ function parseArguments() {
 	.alias('c', 'cancel-price')
 	.describe('c', "Set price at which to cancel entry order if breached (defaults to stop price)")
 	.default('c', 0)
-	// '-n <noScaleOut>' skip scale-out.
+	// '-n <disableScaleOut>' skip scale-out.
 	.boolean('n')
-	.alias('n', 'no-scale-out')
-	.describe('n', "Skip scale-out (100% stop only)")
+	.alias('n', 'disable-scale-out')
+	.describe('n', "Disable scale-out (100% stop only)")
 	.default('n', false)
 	.wrap(process.stdout.columns)
 	.argv;
