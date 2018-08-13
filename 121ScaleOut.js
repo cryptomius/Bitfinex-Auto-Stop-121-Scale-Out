@@ -90,7 +90,7 @@ ws.on('open', () => {
 ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
 	tickerObj = ticker.toJS()
 	if (entryOrderActive) {
-		console.log(tradingPair + ' price: ' + tickerObj.lastPrice + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') cancel price: ' + cancelPrice)
+		console.log(tradingPair + ' price: ' + roundToSignificantDigitsBFX(tickerObj.lastPrice) + ' (ask: ' + tickerObj.ask + ', bid: ' + tickerObj.bid + ') cancel price: ' + cancelPrice)
 
 		if ((entryPrice > cancelPrice && tickerObj.bid <= cancelPrice) || (entryPrice < cancelPrice && tickerObj.ask >= cancelPrice)) {
 			// Cancel the entry order if the cancel price is breached hit prior to entry
@@ -185,11 +185,13 @@ ws.once('auth', () => {
 					if (!isShort){ // with fees:
 						// long
 						//targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
-						targetPrice = (entryPrice * 2) - stopPrice + (entryPrice * 0.002 * 4)
+						//targetPrice = (entryPrice * 2) - stopPrice + (entryPrice * 0.002 * 4)
+						targetPrice = (2*entryPrice) - stopPrice + (4*entryPrice*0.002) / (1 - 0.002)
 					}else {
 						// short
 						//targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
-						targetPrice = (entryPrice * 2) - stopPrice - (stopPrice * 0.002 * 4)
+						//targetPrice = (entryPrice * 2) - stopPrice - (stopPrice * 0.002 * 4)
+						targetPrice = (2*entryPrice) - stopPrice - (4*entryPrice*0.002) / (1 + 0.002)
 					}
 					targetPrice = roundToSignificantDigitsBFX(targetPrice)
 					amount2 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount)/2)
