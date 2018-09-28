@@ -3,11 +3,6 @@
 //  OCO limit+stop order for the other 50% at 1:1 risk/reward to eliminate risk from your trade early
 //  https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out
 
-// SETUP
-const bitfinexAPIKey = '' // leave blank to use API_KEY from .env file
-const bitfinexAPISecret = '' // leave blank to use API_SECRET from .env file
-// END SETUP
-
 var argv = parseArguments()
 
 var tradingPair = argv.pair.toUpperCase()
@@ -45,8 +40,8 @@ const { API_KEY, API_SECRET } = process.env
 const { Order } = BFX.Models
 
 const bfx = new BFX({
-  apiKey: bitfinexAPIKey === '' ? API_KEY : bitfinexAPIKey,
-  apiSecret: bitfinexAPISecret === '' ? API_SECRET : bitfinexAPISecret,
+  apiKey: API_KEY,
+  apiSecret: API_SECRET,
 
   ws: {
     autoReconnect: true,
