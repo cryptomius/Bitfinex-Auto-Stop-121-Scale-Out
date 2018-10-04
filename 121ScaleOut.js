@@ -23,6 +23,7 @@ var hiddenExitOrders = argv.hideexit
 var cancelPrice = argv.cancelPrice
 var isShort = entryPrice < stopPrice
 var noScaleOut = argv.disableScaleOut
+var estimatedSlippagePercent = argv.slippage / 100
 
 console.log('1:1 scale out mode: ' + (noScaleOut?'OFF':'ON'))
 
@@ -186,12 +187,12 @@ ws.once('auth', () => {
 						// long
 						//targetPrice = (entryPrice + (entryPrice - stopPrice)) + ((((entryPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 						//targetPrice = (entryPrice * 2) - stopPrice + (entryPrice * bfxExchangeTakerFee * 4)
-						targetPrice = (2*entryPrice) - stopPrice + (4*entryPrice*bfxExchangeTakerFee) / (1 - bfxExchangeTakerFee)
+						targetPrice = (2*entryPrice) - (stopPrice * (1 - estimatedSlippagePercent)) + (4*entryPrice*bfxExchangeTakerFee) / (1 - bfxExchangeTakerFee)
 					}else {
 						// short
 						//targetPrice = (entryPrice - (stopPrice - entryPrice)) - ((((stopPrice * tradeAmount) * bfxExchangeTakerFee ) * 2) / (tradeAmount/2))
 						//targetPrice = (entryPrice * 2) - stopPrice - (stopPrice * bfxExchangeTakerFee * 4)
-						targetPrice = (2*entryPrice) - stopPrice - (4*entryPrice*bfxExchangeTakerFee) / (1 + bfxExchangeTakerFee)
+						targetPrice = (2*entryPrice) - (stopPrice * (1 + estimatedSlippagePercent)) - (4*entryPrice*bfxExchangeTakerFee) / (1 + bfxExchangeTakerFee)
 					}
 					targetPrice = roundToSignificantDigitsBFX(targetPrice)
 					amount2 = roundToSignificantDigitsBFX((!isShort?-tradeAmount:tradeAmount)/2)
@@ -272,6 +273,11 @@ function parseArguments() {
 	.number('s')
 	.alias('s', 'stop')
 	.describe('s', 'Set stop price')
+	// '-S <estimatedSlippagePercent>'
+	.number('S')
+	.alias('S', 'slippage')
+	.describe('S', 'Estimated slippage percentage on stop order. Set to factor estimated slippage into target price for risk-free scale out.')
+	.default('S', 0)
 	// '-l' for limit-order entry
 	.boolean('l')
 	.alias('l', 'limit')
