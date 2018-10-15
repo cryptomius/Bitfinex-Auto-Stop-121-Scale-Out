@@ -3,20 +3,69 @@
 //  OCO limit+stop order for the other 50% at 1:1 risk/reward to eliminate risk from your trade early
 //  https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out
 
-var argv = parseArguments()
+const { argv } = require('yargs')
+  .usage('Usage: $0')
+  .example('$0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a long market stop entry order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 50% scale-out target.')
+// '-p <tradingPair>'
+  .demand('pair')
+  .alias('p', 'pair')
+  .describe('p', 'Set trading pair eg. BTCUSD')
+// '-a <tradeAmount>'
+  .demand('amount')
+  .number('a')
+  .alias('a', 'amount')
+  .describe('a', 'Set amount to buy/sell')
+// '-e <entryPrice>'
+  .number('e')
+  .alias('e', 'entry')
+  .describe('e', 'Set entry price (exclude for market price)')
+  .default('e', 0)
+// '-s <stopPrice>'
+  .demand('stop')
+  .number('s')
+  .alias('s', 'stop')
+  .describe('s', 'Set stop price')
+// '-S <estimatedSlippagePercent>'
+  .number('S')
+  .alias('S', 'slippage')
+  .describe('S', 'Estimated slippage percentage on stop order. Set to factor estimated slippage into target price for risk-free scale out.')
+  .default('S', 0)
+// '-l' for limit-order entry
+  .boolean('l')
+  .alias('l', 'limit')
+  .describe('l', 'Place limit-order instead of a market stop-order entry (ignored if entryPrice is 0)')
+  .default('l', false)
+// '-t' for stop limit entry trigger price
+  .number('t')
+  .alias('t', 'trigger')
+  .describe('t', 'Trigger price for stop-limit entry')
+  .default('t', 0)
+// '-x' for exchange trading
+  .boolean('x')
+  .alias('x', 'exchange')
+  .describe('x', 'Trade on exchange instead of margin')
+  .default('x', false)
+// '-h' for hidden exit orders
+  .boolean('h')
+  .alias('h', 'hideexit')
+  .describe('h', 'Hide your target and stop orders from the orderbook')
+  .default('h', false)
+// '-c <cancelPrice>' price at which to cancel entry order if breached.
+  .number('c')
+  .alias('c', 'cancel-price')
+  .describe('c', 'Set price at which to cancel entry order if breached (defaults to stop price)')
+  .default('c', 0)
+// '-n <disableScaleOut>' skip scale-out.
+  .boolean('n')
+  .alias('n', 'disable-scale-out')
+  .describe('n', 'Disable scale-out (100% stop only)')
+  .default('n', false)
+  .wrap(process.stdout.columns)
 
-var tradingPair = argv.pair.toUpperCase()
-var tradeAmount = argv.amount
-var entryPrice = argv.entry
-var stopPrice = argv.stop
-var entryLimitOrder = argv.limit
-var margin = !argv.exchange
-var entryStopLimitTrigger = argv.trigger
-var hiddenExitOrders = argv.hideexit
-var cancelPrice = argv.cancelPrice
-var isShort = entryPrice < stopPrice
-var noScaleOut = argv.disableScaleOut
-var estimatedSlippagePercent = argv.slippage / 100
+let {
+  p: tradingPair, a: tradeAmount, e: entryPrice, s: stopPrice, S: slippage, l: entryLimitOrder,
+  t: entryStopLimitTrigger, x: isExchange, h: hiddenExitOrders, c: cancelPrice, n: noScaleOut
+} = argv
 
 console.log('1:1 scale out mode: ' + (noScaleOut ? 'OFF' : 'ON'))
 
@@ -51,10 +100,14 @@ const bfx = new BFX({
   }
 })
 
+tradingPair = tradingPair.toUpperCase()
 entryPrice = roundToSignificantDigitsBFX(entryPrice)
 stopPrice = roundToSignificantDigitsBFX(stopPrice)
 tradeAmount = roundToSignificantDigitsBFX(tradeAmount)
 cancelPrice = cancelPrice ? roundToSignificantDigitsBFX(cancelPrice) : stopPrice
+
+let isShort = entryPrice < stopPrice
+let estimatedSlippagePercent = slippage / 100
 
 var entryOrderActive = false
 
@@ -63,7 +116,7 @@ let entryOrderObj = {
   symbol: 't' + tradingPair,
   price: entryPrice,
   amount: !isShort ? tradeAmount : -tradeAmount,
-  type: Order.type[(!margin ? 'EXCHANGE_' : '') + (entryPrice === 0 ? 'MARKET' : entryLimitOrder ? 'LIMIT' : entryStopLimitTrigger === 0 ? 'STOP' : 'STOP_LIMIT')]
+  type: Order.type[(isExchange ? 'EXCHANGE_' : '') + (entryPrice === 0 ? 'MARKET' : entryLimitOrder ? 'LIMIT' : entryStopLimitTrigger === 0 ? 'STOP' : 'STOP_LIMIT')]
 }
 if (entryStopLimitTrigger !== 0) { // stop limit entry
   entryOrderObj['priceAuxLimit'] = roundToSignificantDigitsBFX(entryStopLimitTrigger)
@@ -116,7 +169,7 @@ ws.once('auth', () => {
       entryOrderActive = false
       ws.unsubscribeTicker('t' + tradingPair)
       console.log('-- POSITION ENTERED --')
-      if (!margin) { tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
+      if (isExchange) { tradeAmount = tradeAmount - (tradeAmount * bfxExchangeTakerFee) }
       if ((noScaleOut === true) || (o.priceAvg == null && entryPrice === 0)) {
         let amount4 = roundToSignificantDigitsBFX((!isShort ? -tradeAmount : tradeAmount))
         if (noScaleOut !== true) {
@@ -137,7 +190,7 @@ ws.once('auth', () => {
           price: stopPrice,
           amount: amount4,
           hidden: hiddenExitOrders,
-          type: Order.type[(!margin ? 'EXCHANGE_' : '') + 'STOP']
+          type: Order.type[(isExchange ? 'EXCHANGE_' : '') + 'STOP']
         }, ws)
         o4.setReduceOnly(true)
 
@@ -163,7 +216,7 @@ ws.once('auth', () => {
           price: stopPrice,
           amount: amount1,
           hidden: hiddenExitOrders,
-          type: Order.type[(!margin ? 'EXCHANGE_' : '') + 'STOP']
+          type: Order.type[(isExchange ? 'EXCHANGE_' : '') + 'STOP']
         }, ws)
         o2.setReduceOnly(true)
 
@@ -184,7 +237,7 @@ ws.once('auth', () => {
             symbol: 't' + tradingPair,
             price: targetPrice, // scale-out target price (1:1)
             amount: amount2,
-            type: Order.type[(!margin ? 'EXCHANGE_' : '') + 'LIMIT'],
+            type: Order.type[(isExchange ? 'EXCHANGE_' : '') + 'LIMIT'],
             oco: true,
             hidden: hiddenExitOrders,
             priceAuxLimit: stopPrice
@@ -223,66 +276,9 @@ ws.once('auth', () => {
   })
 })
 
-if (!margin && isShort) {
+if (isExchange && isShort) {
   console.log('You must use margin=true if you want to go short.')
   process.exit()
 } else {
   ws.open()
-}
-
-function parseArguments () {
-  return require('yargs')
-    .usage('Usage: $0')
-    .example('$0 -p BTCUSD -a 0.004 -e 10000 -s 9000', 'Place a long market stop entry order for 0.004 BTC @ 10000 USD with stop at 9000 USD and default 1:1 50% scale-out target.')
-  // '-p <tradingPair>'
-    .demand('pair')
-    .alias('p', 'pair')
-    .describe('p', 'Set trading pair eg. BTCUSD')
-  // '-a <tradeAmount>'
-    .demand('amount')
-    .number('a')
-    .alias('a', 'amount')
-    .describe('a', 'Set amount to buy/sell')
-  // '-e <entryPrice>'
-    .number('e')
-    .alias('e', 'entry')
-    .describe('e', 'Set entry price (exclude for market price)')
-    .default('e', 0)
-  // '-s <stopPrice>'
-    .demand('stop')
-    .number('s')
-    .alias('s', 'stop')
-    .describe('s', 'Set stop price')
-  // '-l' for limit-order entry
-    .boolean('l')
-    .alias('l', 'limit')
-    .describe('l', 'Place limit-order instead of a market stop-order entry (ignored if entryPrice is 0)')
-    .default('l', false)
-  // '-t' for stop limit entry trigger price
-    .number('t')
-    .alias('t', 'trigger')
-    .describe('t', 'Trigger price for stop-limit entry')
-    .default('t', 0)
-  // '-x' for exchange trading
-    .boolean('x')
-    .alias('x', 'exchange')
-    .describe('x', 'Trade on exchange instead of margin')
-    .default('x', false)
-  // '-h' for hidden exit orders
-    .boolean('h')
-    .alias('h', 'hideexit')
-    .describe('h', 'Hide your target and stop orders from the orderbook')
-    .default('h', false)
-  // '-c <cancelPrice>' price at which to cancel entry order if breached.
-    .number('c')
-    .alias('c', 'cancel-price')
-    .describe('c', 'Set price at which to cancel entry order if breached (defaults to stop price)')
-    .default('c', 0)
-  // '-n <disableScaleOut>' skip scale-out.
-    .boolean('n')
-    .alias('n', 'disable-scale-out')
-    .describe('n', 'Disable scale-out (100% stop only)')
-    .default('n', false)
-    .wrap(process.stdout.columns)
-    .argv
 }
