@@ -119,7 +119,8 @@ let entryOrderObj = {
   type: Order.type[(isExchange ? 'EXCHANGE_' : '') + (entryPrice === 0 ? 'MARKET' : entryLimitOrder ? 'LIMIT' : entryStopLimitTrigger === 0 ? 'STOP' : 'STOP_LIMIT')]
 }
 if (entryStopLimitTrigger !== 0) { // stop limit entry
-  entryOrderObj['priceAuxLimit'] = roundToSignificantDigitsBFX(entryStopLimitTrigger)
+  entryOrderObj['price'] = roundToSignificantDigitsBFX(entryStopLimitTrigger)
+  entryOrderObj['priceAuxLimit'] = entryPrice
   console.log('entryStopLimitTrigger = ' + entryStopLimitTrigger + ' entryPrice = ' + entryPrice)
 }
 
