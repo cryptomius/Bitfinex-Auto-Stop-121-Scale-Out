@@ -283,3 +283,33 @@ if (isExchange && isShort) {
 } else {
   ws.open()
 }
+
+// safety mechanism - cancel order if process is interrupted.
+process.once('SIGINT', function (code) {
+  console.log(`SIGINT received at - code ${code} - cancel order`)
+  cancelOrderAndExit()
+})
+
+process.once('SIGTERM', function (code) {
+  console.log(`SIGTERM received at - code ${code} - cancel order`)
+  cancelOrderAndExit()
+})
+
+process.once('SIGHUP', function (code) {
+  console.log(`SIGHUP received - code ${code} - cancel order`)
+  cancelOrderAndExit()
+})
+
+function cancelOrderAndExit () {
+  if (entryOrderActive) {
+    o.cancel().then(() => {
+      console.log('Cancellation confirmed for order %d', o.cid)
+      entryOrderActive = false
+      ws.close()
+      process.exit()
+    })
+  } else {
+    ws.close()
+    process.exit()
+  }
+}
