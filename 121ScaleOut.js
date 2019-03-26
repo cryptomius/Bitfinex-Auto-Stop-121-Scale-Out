@@ -86,7 +86,7 @@ var roundToSignificantDigitsBFX = function (num) {
 const BFX = require('bitfinex-api-node')
 require('dotenv').config()
 const { API_KEY, API_SECRET } = process.env
-const { Order } = BFX.Models
+const { Order } = require('bfx-api-node-models')
 
 const bfx = new BFX({
   apiKey: API_KEY,
