@@ -40,6 +40,11 @@ const { argv } = require('yargs')
   .alias('t', 'trigger')
   .describe('t', 'Trigger price for stop-limit entry')
   .default('t', 0)
+// '-T' for target scale out price
+  .number('T')
+  .alias('T', 'target')
+  .describe('T', 'Target price for scale out')
+  .default('T', 0)
 // '-x' for exchange trading
   .boolean('x')
   .alias('x', 'exchange')
@@ -64,10 +69,13 @@ const { argv } = require('yargs')
 
 let {
   p: tradingPair, a: tradeAmount, e: entryPrice, s: stopPrice, S: slippage, l: entryLimitOrder,
-  t: entryStopLimitTrigger, x: isExchange, h: hiddenExitOrders, c: cancelPrice, n: noScaleOut
+  t: entryStopLimitTrigger, T: targetPrice, x: isExchange, h: hiddenExitOrders, c: cancelPrice, n: noScaleOut
 } = argv
 
 console.log('1:1 scale out mode: ' + (noScaleOut ? 'OFF' : 'ON'))
+if (targetPrice) {
+  console.log('Fixed target price: ' + targetPrice)
+}
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee
 
@@ -227,9 +235,12 @@ ws.once('auth', () => {
           console.log(' Average price of entry = ' + o.priceAvg)
           entryPrice = o.priceAvg
           console.log('Submitted 50% stop order')
-          let targetPrice = !isShort
-            ? (2 * entryPrice) - (stopPrice * (1 - estimatedSlippagePercent)) + (4 * entryPrice * bfxExchangeTakerFee) / (1 - bfxExchangeTakerFee)
-            : (2 * entryPrice) - (stopPrice * (1 + estimatedSlippagePercent)) - (4 * entryPrice * bfxExchangeTakerFee) / (1 + bfxExchangeTakerFee)
+          if (!targetPrice) {
+            // no target price supplied so calculate one
+              targetPrice = !isShort
+              ? (2 * entryPrice) - (stopPrice * (1 - estimatedSlippagePercent)) + (4 * entryPrice * bfxExchangeTakerFee) / (1 - bfxExchangeTakerFee)
+              : (2 * entryPrice) - (stopPrice * (1 + estimatedSlippagePercent)) - (4 * entryPrice * bfxExchangeTakerFee) / (1 + bfxExchangeTakerFee)
+          }
           targetPrice = roundToSignificantDigitsBFX(targetPrice)
           let amount2 = roundToSignificantDigitsBFX((!isShort ? -tradeAmount : tradeAmount) / 2)
 
