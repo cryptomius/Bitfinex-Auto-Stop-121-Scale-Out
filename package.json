@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/cryptomius/Bitfinex-Auto-Stop-121-Scale-Out#readme",
   "dependencies": {
-    "bitfinex-api-node": "2.0.4",
+    "bitfinex-api-node": "2.0.6",
     "dotenv": "^4.0.0",
     "yargs": "^11.0.0",
     "socks-proxy-agent": "^4.0.1"
