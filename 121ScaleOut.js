@@ -108,6 +108,11 @@ const bfx = new BFX({
   }
 })
 
+if (!stopPrice) {
+  console.log("No stop price - for your own safety this will terminate.")
+  process.exit(1);
+}
+
 tradingPair = tradingPair.toUpperCase()
 entryPrice = roundToSignificantDigitsBFX(entryPrice)
 stopPrice = roundToSignificantDigitsBFX(stopPrice)
