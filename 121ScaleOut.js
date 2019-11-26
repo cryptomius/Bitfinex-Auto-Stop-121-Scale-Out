@@ -138,13 +138,17 @@ if (entryStopLimitTrigger !== 0) { // stop limit entry
 }
 
 const ws = bfx.ws(2)
-const o = new Order(entryOrderObj)
+const o = new Order(entryOrderObj, ws)
 
-ws.on('error', (err) => console.log(err))
-ws.on('open', () => {
+ws.on('error', (err) => console.error('bfx ws error', err))
+ws.once('open', () => {
   ws.subscribeTicker('t' + tradingPair)
   console.log('Monitoring ' + tradingPair + ' for breach of cancel price: ' + cancelPrice)
   ws.auth()
+})
+
+ws.on('close', () => {
+  console.log('Websocket was closed.')
 })
 
 ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
