@@ -40,6 +40,11 @@ const { argv } = require('yargs')
   .alias('t', 'trigger')
   .describe('t', 'Trigger price for stop-limit entry')
   .default('t', 0)
+// '-T' for target scale out price
+  .number('T')
+  .alias('T', 'target')
+  .describe('T', 'Target price for scale out')
+  .default('T', 0)
 // '-x' for exchange trading
   .boolean('x')
   .alias('x', 'exchange')
@@ -64,10 +69,13 @@ const { argv } = require('yargs')
 
 let {
   p: tradingPair, a: tradeAmount, e: entryPrice, s: stopPrice, S: slippage, l: entryLimitOrder,
-  t: entryStopLimitTrigger, x: isExchange, h: hiddenExitOrders, c: cancelPrice, n: noScaleOut
+  t: entryStopLimitTrigger, T: targetPrice, x: isExchange, h: hiddenExitOrders, c: cancelPrice, n: noScaleOut
 } = argv
 
 console.log('1:1 scale out mode: ' + (noScaleOut ? 'OFF' : 'ON'))
+if (targetPrice) {
+  console.log('Fixed target price: ' + targetPrice)
+}
 
 const bfxExchangeTakerFee = 0.002 // 0.2% 'taker' fee
 
@@ -100,6 +108,11 @@ const bfx = new BFX({
   }
 })
 
+if (!stopPrice) {
+  console.log("No stop price - for your own safety this will terminate.")
+  process.exit(1);
+}
+
 tradingPair = tradingPair.toUpperCase()
 entryPrice = roundToSignificantDigitsBFX(entryPrice)
 stopPrice = roundToSignificantDigitsBFX(stopPrice)
@@ -125,13 +138,17 @@ if (entryStopLimitTrigger !== 0) { // stop limit entry
 }
 
 const ws = bfx.ws(2)
-const o = new Order(entryOrderObj)
+const o = new Order(entryOrderObj, ws)
 
-ws.on('error', (err) => console.log(err))
-ws.on('open', () => {
+ws.on('error', (err) => console.error('bfx ws error', err))
+ws.once('open', () => {
   ws.subscribeTicker('t' + tradingPair)
   console.log('Monitoring ' + tradingPair + ' for breach of cancel price: ' + cancelPrice)
   ws.auth()
+})
+
+ws.on('close', () => {
+  console.log('Websocket was closed.')
 })
 
 ws.onTicker({ symbol: 't' + tradingPair }, (ticker) => {
@@ -227,9 +244,12 @@ ws.once('auth', () => {
           console.log(' Average price of entry = ' + o.priceAvg)
           entryPrice = o.priceAvg
           console.log('Submitted 50% stop order')
-          let targetPrice = !isShort
-            ? (2 * entryPrice) - (stopPrice * (1 - estimatedSlippagePercent)) + (4 * entryPrice * bfxExchangeTakerFee) / (1 - bfxExchangeTakerFee)
-            : (2 * entryPrice) - (stopPrice * (1 + estimatedSlippagePercent)) - (4 * entryPrice * bfxExchangeTakerFee) / (1 + bfxExchangeTakerFee)
+          if (!targetPrice) {
+            // no target price supplied so calculate one
+              targetPrice = !isShort
+              ? (2 * entryPrice) - (stopPrice * (1 - estimatedSlippagePercent)) + (4 * entryPrice * bfxExchangeTakerFee) / (1 - bfxExchangeTakerFee)
+              : (2 * entryPrice) - (stopPrice * (1 + estimatedSlippagePercent)) - (4 * entryPrice * bfxExchangeTakerFee) / (1 + bfxExchangeTakerFee)
+          }
           targetPrice = roundToSignificantDigitsBFX(targetPrice)
           let amount2 = roundToSignificantDigitsBFX((!isShort ? -tradeAmount : tradeAmount) / 2)
 
