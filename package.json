@@ -1,6 +1,6 @@
 {
   "name": "bitfinex-auto-stop-121-scale-out",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "description": "Automatically place a stop when your Bitfinex entry price order is filled and scale out 50% at 1:1 (including fees) for a risk free position",
   "main": "121ScaleOut.js",
   "bin": "121ScaleOut.js",
@@ -10,7 +10,8 @@
   },
   "author": "Shannon Murdoch (https://github.com/cryptomius)",
   "contributors": [
-    "Tony Ho (https://github.com/tony-ho)"
+    "Tony Ho (https://github.com/tony-ho)",
+    "Roger Watkins (https://github.com/rogerwatkins)"
   ],
   "license": "MIT",
   "bugs": {
